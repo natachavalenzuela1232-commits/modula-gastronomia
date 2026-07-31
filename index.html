@@ -1,1 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MODULA Gastronomía</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root {
+  --bg:#FAF6F1;--surface:#FFF;--surface-2:#FBF3EC;
+  --ink:#2B211B;--ink-soft:#75655A;
+  --primary:#C1440E;--primary-dark:#8C2F08;--primary-tint:#FBE7DA;
+  --accent:#2F7E68;--accent-tint:#E1F0EA;
+  --warn:#C79A2E;--warn-tint:#FBF0D8;
+  --line:#E9DED2;--shadow:0 1px 2px rgba(43,33,27,.05),0 4px 16px rgba(43,33,27,.07);
+}
+*{box-sizing:border-box}
+html,body,#root{margin:0;padding:0;min-height:100%;background:var(--bg)}
+body{font-family:'Manrope',sans-serif;color:var(--ink)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.field{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--surface-2);font-size:14px;color:var(--ink)}
+.field:focus{outline:2px solid var(--primary);outline-offset:1px}
+.bp{background:var(--primary);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;justify-content:center}
+.bp:hover{background:var(--primary-dark)}
+.bp:disabled{opacity:.55}
+.bg{background:transparent;border:1px solid var(--line);color:var(--ink-soft);padding:8px 12px;border-radius:9px;font-weight:600;font-size:13px}
+.bg:hover{background:var(--surface-2)}
+.tag{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+.mesabtn{border-radius:14px;padding:18px 10px;border:2px solid var(--line);background:var(--surface);font-weight:800;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:6px}
+@media(max-width:760px){
+  .app-shell{flex-direction:column}
+  .sidebar{width:100%!important;flex-direction:row!important;overflow-x:auto;border-right:none!important;border-bottom:1px solid var(--line);padding:10px!important}
+  .sidebar nav{flex-direction:row!important}
+  .sidebar .tip{display:none}
+  main{padding:16px!important}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef}=React;
+const SUPABASE_URL="https://zibuxcbidjymrlvdsgse.supabase.co";
+const SUPABASE_KEY="sb_publishable_9Wcf3GqvO8WQYQqAm5oGIQ_troL-Oav";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const money=n=>`$${Number(n||0).toLocaleString("es-AR")}`;
+const hora=iso=>new Date(iso).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+const hoy=()=>new Date().toISOString().slice(0,10);
 
+function Login(){
+  const[mode,setMode]=useState("signin");
+  const[email,setEmail]=useState("");
+  const[pw,setPw]=useState("");
+  const[loading,setLoading]=useState(false);
+  const[msg,setMsg]=useState("");
+  const submit=async()=>{
+    setMsg("");setLoading(true);
+    try{
+      if(mode==="signin"){const{error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error;}
+      else{const{error}=await sb.auth.signUp({email,password:pw});if(error)throw error;setMsg("¡Cuenta creada! Ya podés iniciar sesión.");setMode("signin");}
+    }catch(e){setMsg(e.message||"Error, probá de nuevo.");}
+    finally{setLoading(false);}
+  };
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:20}}>
+      <div className="card" style={{width:"100%",maxWidth:380,padding:32}}>
+        <div style={{textAlign:"center",marginBottom:26}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:24,color:"var(--primary-dark)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastronomía</span></div>
+          <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":"Creá la cuenta de tu negocio"}</div>
+        </div>
+        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Email</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tunegocio@email.com"/></div>
+        <div style={{marginBottom:18}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><input className="field" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
+        {msg&&<div style={{fontSize:12.5,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
+        <button className="bp" style={{width:"100%",padding:12}} onClick={submit} disabled={loading||!email||!pw}>{loading?"Un momento…":mode==="signin"?"Iniciar sesión":"Crear cuenta"}</button>
+        <div style={{textAlign:"center",marginTop:16,fontSize:13}}>
+          {mode==="signin"?<span style={{color:"var(--ink-soft)"}}>¿Primera vez? <a href="#" onClick={e=>{e.preventDefault();setMode("signup");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Creá la cuenta</a></span>:<span style={{color:"var(--ink-soft)"}}>¿Ya tenés? <a href="#" onClick={e=>{e.preventDefault();setMode("signin");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Iniciá sesión</a></span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectorIdentidad({empleados,onElegir}){
+  const[eli,setEli]=useState(null);
+  const[pin,setPin]=useState("");
+  const[err,setErr]=useState("");
+  const confirmar=()=>{if(eli.pin!==pin.trim()){setErr("PIN incorrecto.");return;}onElegir({rol:eli.rol,id:eli.id,nombre:eli.nombre});};
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:20}}>
+      <div className="card" style={{width:"100%",maxWidth:420,padding:32}}>
+        {!eli?(
+          <React.Fragment>
+            <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:20,color:"var(--primary-dark)",textAlign:"center",marginBottom:22}}>¿Quién sos?</div>
+            <button className="bp" style={{width:"100%",padding:14,marginBottom:10,fontSize:15}} onClick={()=>onElegir({rol:"dueño",id:null,nombre:"Dueño/a"})}>👑 Soy el dueño/a</button>
+            {empleados.filter(e=>e.activo).map(e=>(
+              <button key={e.id} className="bg" style={{width:"100%",padding:14,marginBottom:8,fontSize:14.5,textAlign:"left",display:"flex",alignItems:"center",gap:10}} onClick={()=>{setEli(e);setPin("");setErr("");}}>
+                {e.rol==="mozo"?"🧑‍🍳":"👨‍🍳"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:11.5,fontWeight:700}}>{e.rol==="mozo"?"MOZO":"COCINA"}</span>
+              </button>
+            ))}
+            {!empleados.filter(e=>e.activo).length&&<div style={{fontSize:12.5,color:"var(--ink-soft)",textAlign:"center",marginTop:8}}>El dueño puede agregar empleados desde su panel.</div>}
+          </React.Fragment>
+        ):(
+          <React.Fragment>
+            <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:18,color:"var(--primary-dark)",textAlign:"center",marginBottom:16}}>Hola, {eli.nombre} — ingresá tu PIN</div>
+            <input className="field" type="password" inputMode="numeric" value={pin} onChange={e=>setPin(e.target.value)} placeholder="PIN" style={{textAlign:"center",fontSize:20,letterSpacing:4,marginBottom:12}} onKeyDown={e=>e.key==="Enter"&&confirmar()} autoFocus/>
+            {err&&<div style={{color:"var(--primary)",fontSize:12.5,textAlign:"center",marginBottom:10}}>{err}</div>}
+            <button className="bp" style={{width:"100%",padding:12,marginBottom:8}} onClick={confirmar}>Entrar</button>
+            <button className="bg" style={{width:"100%"}} onClick={()=>setEli(null)}>Volver</button>
+          </React.Fragment>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function App(){
+  const[session,setSession]=useState(undefined);
+  const[identidad,setIdentidad]=useState(null);
+  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[]});
+  const[loading,setLoading]=useState(true);
+
+  useEffect(()=>{
+    sb.auth.getSession().then(({data})=>setSession(data.session));
+    const{data:l}=sb.auth.onAuthStateChange((_,s)=>setSession(s));
+    return()=>l.subscription.unsubscribe();
+  },[]);
+
+  const loadAll=async()=>{
+    setLoading(true);
+    const[e,m,mn,p,it,ins,rec,ci]=await Promise.all([
+      sb.from("empleados").select("*").order("created_at"),
+      sb.from("mesas").select("*").order("numero"),
+      sb.from("menu_items").select("*").order("categoria"),
+      sb.from("pedidos").select("*").eq("estado","abierta"),
+      sb.from("pedido_items").select("*").order("created_at"),
+      sb.from("insumos").select("*").order("nombre"),
+      sb.from("recetas").select("*"),
+      sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(30),
+    ]);
+    setData({
+      empleados:e.data||[],mesas:m.data||[],menu:mn.data||[],
+      pedidos:p.data||[],items:it.data||[],insumos:ins.data||[],
+      recetas:rec.data||[],cierres:ci.data||[],
+    });
+    setLoading(false);
+  };
+
+  useEffect(()=>{
+    if(!session)return;
+    loadAll();
+    const saved=localStorage.getItem("modula_id");
+    if(saved)try{setIdentidad(JSON.parse(saved));}catch{}
+    const canal=sb.channel("rt").on("postgres_changes",{event:"*",schema:"public",table:"pedido_items"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mesas"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"insumos"},()=>loadAll()).subscribe();
+    return()=>sb.removeChannel(canal);
+  },[session]);
+
+  const elegir=id=>{setIdentidad(id);localStorage.setItem("modula_id",JSON.stringify(id));};
+  const cambiar=()=>{localStorage.removeItem("modula_id");setIdentidad(null);};
+  const logout=async()=>{localStorage.removeItem("modula_id");await sb.auth.signOut();};
+
+  if(session===undefined)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando…</div>;
+  if(!session)return<Login/>;
+  if(loading)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando el negocio…</div>;
+  if(!identidad)return<SelectorIdentidad empleados={data.empleados} onElegir={elegir}/>;
+
+  const props={userId:session.user.id,identidad,...data,reload:loadAll,cambiar,logout};
+  if(identidad.rol==="dueño")return<VistaDueño {...props}/>;
+  if(identidad.rol==="mozo")return<VistaMozo {...props}/>;
+  if(identidad.rol==="cocina")return<VistaCocina {...props}/>;
+  return null;
+}
+
+function TopBar({titulo,identidad,cambiar,logout}){
+  return(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"var(--surface)",borderBottom:"1px solid var(--line)"}}>
+      <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:12.5,color:"var(--ink-soft)",fontWeight:600}}>{identidad.nombre}</span>
+        <button className="bg" style={{padding:"6px 10px",fontSize:12}} onClick={cambiar}>Cambiar</button>
+        <button className="bg" style={{padding:"6px 10px",fontSize:12}} onClick={logout}>Salir</button>
+      </div>
+    </div>
+  );
+}
+
+// ---- VISTA MOZO ----
+function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,logout}){
+  const[mesaId,setMesaId]=useState(null);
+  const[acl,setAcl]=useState("");
+  const misMesas=mesas.filter(m=>m.estado==="libre"||m.mozo_id===identidad.id);
+  const mesaSel=mesaId?mesas.find(m=>m.id===mesaId):null;
+  const pedSel=mesaSel?pedidos.find(p=>p.mesa_id===mesaSel.id):null;
+  const itemsMesa=pedSel?items.filter(i=>i.pedido_id===pedSel.id):[];
+  const abrirMesa=async m=>{
+    if(m.estado==="libre"){
+      await sb.from("mesas").update({estado:"ocupada",mozo_id:identidad.id,mozo_nombre:identidad.nombre}).eq("id",m.id);
+      await sb.from("pedidos").insert({user_id:userId,mesa_id:m.id,mesa_numero:m.numero,mozo_id:identidad.id,mozo_nombre:identidad.nombre,estado:"abierta"});
+      await reload();
+    }
+    setMesaId(m.id);
+  };
+  const agregarItem=async mi=>{
+    if(!pedSel)return;
+    await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:"pendiente"});
+    setAcl("");reload();
+  };
+  const borrarItem=async i=>{if(i.estado==="pendiente"){await sb.from("pedido_items").delete().eq("id",i.id);reload();}};
+  const marcarEntregado=async i=>{await sb.from("pedido_items").update({estado:"entregado"}).eq("id",i.id);reload();};
+  const cerrarMesa=async()=>{
+    if(!confirm("¿Cerrar la mesa?"))return;
+    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+    await sb.from("pedidos").update({estado:"cerrada",total,cerrado_at:new Date().toISOString()}).eq("id",pedSel.id);
+    await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",mesaSel.id);
+    setMesaId(null);reload();
+  };
+  const cats=[...new Set(menu.filter(m=>m.activo).map(m=>m.categoria))];
+  if(mesaSel){
+    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+    return(
+      <div>
+        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
+        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+          <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
+          <div className="card" style={{padding:16,marginBottom:16}}>
+            <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
+            {!itemsMesa.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
+            {itemsMesa.map(i=>(
+              <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)"}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:13.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
+                  <div style={{fontSize:11,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
+                </div>
+                <span className="tag" style={{background:i.estado==="pendiente"?"var(--warn-tint)":i.estado==="listo"?"var(--accent-tint)":"var(--surface-2)",color:i.estado==="pendiente"?"var(--warn)":i.estado==="listo"?"var(--accent)":"var(--ink-soft)"}}>{i.estado==="pendiente"?"En cocina":i.estado==="listo"?"¡Listo!":"Entregado"}</span>
+                {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:11.5}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
+                {i.estado==="pendiente"&&<button className="bg" style={{padding:"6px 8px",fontSize:11.5}} onClick={()=>borrarItem(i)}>✕</button>}
+              </div>
+            ))}
+            {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(total)}</div>}
+          </div>
+          <div className="card" style={{padding:16,marginBottom:16}}>
+            <input className="field" placeholder="Aclaración opcional: sin sal, para llevar…" value={acl} onChange={e=>setAcl(e.target.value)} style={{marginBottom:14}}/>
+            {cats.map(cat=>(
+              <div key={cat} style={{marginBottom:14}}>
+                <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
+                  {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
+                    <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>agregarItem(m)}>
+                      {m.nombre}<div style={{fontWeight:600,fontSize:11.5,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {!menu.length&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>El dueño todavía no cargó el menú.</div>}
+          </div>
+          <button className="bp" style={{width:"100%",padding:14}} onClick={cerrarMesa} disabled={!itemsMesa.length}>Cerrar mesa y pedir la cuenta</button>
+        </div>
+      </div>
+    );
+  }
+  return(
+    <div>
+      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
+      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
+          {misMesas.map(m=>(
+            <button key={m.id} className="mesabtn" style={{borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",background:m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
+              Mesa {m.numero}
+              <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
+            </button>
+          ))}
+        </div>
+        {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14,marginTop:20}}>El dueño todavía no cargó las mesas.</div>}
+      </div>
+    </div>
+  );
+}
+
+// ---- VISTA COCINA ----
+function VistaCocina({identidad,items,cambiar,logout,reload}){
+  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
+  const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
+  return(
+    <div>
+      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>
+      <div style={{padding:18}}>
+        {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+          {Object.entries(porMesa).map(([mesa,its])=>(
+            <div key={mesa} className="card" style={{padding:16}}>
+              <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",marginBottom:10}}>Mesa {mesa}</div>
+              {its.map(i=>(
+                <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:"1px solid var(--line)"}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
+                    {i.aclaracion&&<div style={{fontSize:12,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
+                    <div style={{fontSize:11,color:"var(--
