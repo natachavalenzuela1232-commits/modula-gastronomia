@@ -302,4 +302,304 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
                     {i.aclaracion&&<div style={{fontSize:12,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
-                    <div style={{fontSize:11,color:"var(--
+                                        <div style={{fontSize:11,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                  </div>
+                  {i.estado==="pendiente"?<button className="bp" style={{fontSize:12,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---- VISTA DUEÑO ----
+function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,reload,cambiar,logout}){
+  const[tab,setTab]=useState("mesas");
+  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
+  const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
+  const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
+  return(
+    <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
+      <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
+        <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",padding:"0 8px 14px",borderBottom:"1px solid var(--line)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastro</span></div>
+        <nav style={{display:"flex",flexDirection:"column",gap:4}}>
+          {NAV.map(n=>(
+            <button key={n.id} onClick={()=>setTab(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 14px",borderRadius:10,border:"none",background:tab===n.id?"var(--primary)":"transparent",color:tab===n.id?"white":"var(--ink-soft)",fontSize:14,fontWeight:700,textAlign:"left",position:"relative"}}>
+              {n.icon} {n.label}
+              {n.id==="stock"&&stockBajo.length>0&&<span style={{marginLeft:"auto",background:"var(--warn)",color:"white",borderRadius:"999px",fontSize:11,padding:"1px 7px",fontWeight:800}}>{stockBajo.length}</span>}
+            </button>
+          ))}
+        </nav>
+        <div style={{marginTop:"auto",display:"flex",flexDirection:"column",gap:8}}>
+          <button className="bg" onClick={cambiar}>Cambiar usuario</button>
+          <button className="bg" onClick={logout}>Cerrar sesión</button>
+        </div>
+      </aside>
+      <main style={{flex:1,padding:"26px 32px",maxWidth:1000}}>
+        <div className="card" style={{padding:"16px 20px",marginBottom:22,background:"var(--primary-tint)",border:"none",display:"flex",flexWrap:"wrap",gap:24}}>
+          <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>VENTA DE HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{money(totalHoy)}</div></div>
+          <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
+          {stockBajo.length>0&&<div><div style={{fontSize:11.5,fontWeight:800,color:"var(--warn)"}}>⚠ STOCK BAJO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--warn)"}}>{stockBajo.length} insumo{stockBajo.length!==1?"s":""}</div></div>}
+        </div>
+        {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
+        {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
+        {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
+        {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} reload={reload}/>}
+        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
+      </main>
+    </div>
+  );
+}
+
+function PanelMesas({userId,mesas,pedidos,items,reload}){
+  const[cant,setCant]=useState("");
+  const crear=async()=>{const n=parseInt(cant);if(!n||n<1)return;const ex=mesas.length;const nv=Array.from({length:n},(_,i)=>({user_id:userId,numero:ex+i+1}));await sb.from("mesas").insert(nv);setCant("");reload();};
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:18,alignItems:"flex-end"}}>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Agregar mesas</label><input className="field" type="number" style={{width:100}} value={cant} onChange={e=>setCant(e.target.value)} placeholder="cant."/></div>
+        <button className="bp" onClick={crear}>Agregar</button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
+        {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);return(
+          <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
+            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
+            <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
+            {m.estado==="ocupada"&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
+          </div>
+        );})}
+        {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste mesas.</div>}
+      </div>
+    </div>
+  );
+}
+
+function PanelEmpleados({userId,empleados,reload}){
+  const[form,setForm]=useState({nombre:"",rol:"mozo",pin:""});
+  const[open,setOpen]=useState(false);
+  const add=async()=>{if(!form.nombre||!form.pin)return;await sb.from("empleados").insert({...form,user_id:userId});setForm({nombre:"",rol:"mozo",pin:""});setOpen(false);reload();};
+  const toggle=async e=>{await sb.from("empleados").update({activo:!e.activo}).eq("id",e.id);reload();};
+  const del=async id=>{if(confirm("¿Eliminar este empleado?")){{await sb.from("empleados").delete().eq("id",id);reload();}}};
+  return(
+    <div>
+      <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
+      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})}/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" style={{width:100}} value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\D/g,"")})} placeholder="1234"/></div>
+        <button className="bp" onClick={add}>Guardar</button>
+      </div>}
+      <div className="card" style={{overflow:"hidden"}}>
+        {empleados.map((e,i)=>(
+          <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>{e.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":"Cocina"} · PIN {e.pin}</div></div>
+            <span className="tag" style={{background:e.activo?"var(--accent-tint)":"var(--surface-2)",color:e.activo?"var(--accent)":"var(--ink-soft)"}}>{e.activo?"Activo":"Inactivo"}</span>
+            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(e)}>{e.activo?"Desactivar":"Activar"}</button>
+            <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(e.id)}>🗑</button>
+          </div>
+        ))}
+        {!empleados.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste empleados.</div>}
+      </div>
+    </div>
+  );
+}
+
+function PanelMenu({userId,menu,insumos,recetas,reload}){
+  const[form,setForm]=useState({nombre:"",categoria:"",precio:""});
+  const[open,setOpen]=useState(false);
+  const[selItem,setSelItem]=useState(null);
+  const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
+  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:""});setOpen(false);reload();};
+  const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
+  const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
+  const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)});setRecForm({insumo_id:"",cantidad:""});reload();};
+  const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
+  const cats=[...new Set(menu.map(m=>m.categoria))];
+  const costoItem=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  return(
+    <div>
+      <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo ítem del menú</button>
+      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/></div>
+        <button className="bp" onClick={add}>Guardar</button>
+      </div>}
+      {selItem&&(
+        <div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={{fontWeight:700,color:"var(--accent)"}}>📦 Receta: {selItem.nombre}</div>
+            <button className="bg" style={{fontSize:11.5}} onClick={()=>setSelItem(null)}>Cerrar</button>
+          </div>
+          {recetas.filter(r=>r.menu_item_id===selItem.id).map(r=>{const ins=insumos.find(i=>i.id===r.insumo_id);return(
+            <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:"1px solid var(--line)"}}>
+              <div style={{flex:1,fontSize:13.5}}>{ins?.nombre||"?"} — {r.cantidad} {ins?.unidad||""}</div>
+              <button className="bg" style={{padding:"4px 8px",fontSize:11}} onClick={()=>delRec(r.id)}>✕</button>
+            </div>
+          );})}
+          <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div style={{flex:1}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
+              <select className="field" value={recForm.insumo_id} onChange={e=>setRecForm({...recForm,insumo_id:e.target.value})}>
+                <option value="">Elegir…</option>
+                {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
+              </select>
+            </div>
+            <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" type="number" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value})}/></div>
+            <button className="bp" onClick={addRec}>Agregar</button>
+          </div>
+          {!insumos.length&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Primero cargá insumos en la sección "Stock".</div>}
+        </div>
+      )}
+      {cats.map(cat=>(
+        <div key={cat} style={{marginBottom:18}}>
+          <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+          <div className="card" style={{overflow:"hidden"}}>
+            {menu.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
+              <div key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
+                <div style={{flex:1}}><div style={{fontWeight:700}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
+                <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(m.precio)}</div>
+                <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta</button>
+                <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)"}}>{m.activo?"Activo":"Pausado"}</span>
+                <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
+              </div>
+            );})}
+          </div>
+        </div>
+      ))}
+      {!menu.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste el menú.</div>}
+    </div>
+  );
+}
+
+function PanelStock({userId,insumos,reload}){
+  const[form,setForm]=useState({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});
+  const[open,setOpen]=useState(false);
+  const[compra,setCompra]=useState({insumo_id:"",cantidad:"",precio_unitario:""});
+  const[openC,setOpenC]=useState(false);
+  const add=async()=>{if(!form.nombre)return;await sb.from("insumos").insert({...form,stock_actual:Number(form.stock_actual)||0,stock_minimo:Number(form.stock_minimo)||1,precio_compra:Number(form.precio_compra)||0,user_id:userId});setForm({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});setOpen(false);reload();};
+  const registrarCompra=async()=>{
+    if(!compra.insumo_id||!compra.cantidad)return;
+    const cant=Number(compra.cantidad);const precio=Number(compra.precio_unitario)||0;
+    const ins=insumos.find(i=>i.id===compra.insumo_id);if(!ins)return;
+    await sb.from("insumos").update({stock_actual:Number(ins.stock_actual)+cant,precio_compra:precio||ins.precio_compra}).eq("id",ins.id);
+    await sb.from("compras").insert({user_id:userId,insumo_id:compra.insumo_id,cantidad:cant,precio_unitario:precio});
+    setCompra({insumo_id:"",cantidad:"",precio_unitario:""});setOpenC(false);reload();
+  };
+  const del=async id=>{if(confirm("¿Eliminar este insumo?")){{await sb.from("insumos").delete().eq("id",id);reload();}}};
+  const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
+  return(
+    <div>
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <button className="bp" onClick={()=>{setOpen(!open);setOpenC(false);}}>➕ Nuevo insumo</button>
+        <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);}}>📥 Registrar compra</button>
+      </div>
+      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio compra</label><input className="field" type="number" style={{width:110}} value={form.precio_compra} onChange={e=>setForm({...form,precio_compra:e.target.value})} placeholder="500"/></div>
+        <button className="bp" onClick={add}>Guardar</button>
+      </div>}
+      {openC&&<div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
+        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div style={{flex:1}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
+            <select className="field" value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
+              <option value="">Elegir…</option>
+              {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
+            </select>
+          </div>
+          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad comprada</label><input className="field" type="number" style={{width:110}} value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:e.target.value})}/></div>
+          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio por unidad</label><input className="field" type="number" style={{width:120}} value={compra.precio_unitario} onChange={e=>setCompra({...compra,precio_unitario:e.target.value})}/></div>
+          <button className="bp" style={{background:"var(--accent)"}} onClick={registrarCompra}>Registrar</button>
+        </div>
+      </div>}
+      {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
+                {bajos.map(i=><div key={i.id} style={{fontSize:13.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
+      </div>}
+      <div className="card" style={{overflow:"hidden"}}>
+        {insumos.map((i,idx)=>(
+          <div key={i.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:idx?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>{i.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontWeight:800,fontSize:15,color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{i.stock_actual} {i.unidad}</div>
+              <div style={{fontSize:11,color:"var(--ink-soft)"}}>mín: {i.stock_minimo}</div>
+            </div>
+            <span className="tag" style={{background:i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)"}}>{i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
+            <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(i.id)}>🗑</button>
+          </div>
+        ))}
+        {!insumos.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
+      </div>
+    </div>
+  );
+}
+
+function PanelCaja({userId,pedidos,items,cierres,reload}){
+  const[metodo,setMetodo]=useState({});
+  const pedCerradosHoy=[];
+  const cerrarCaja=async()=>{
+    if(!confirm("¿Cerrar la caja del día?"))return;
+    let ef=0,tar=0,tr=0,mesas=0;
+    pedidos.forEach(p=>{const met=metodo[p.id]||"efectivo";const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;mesas++;});
+    const total=ef+tar+tr;
+    await sb.from("cierres_caja").insert({user_id:userId,fecha:hoy(),total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesas});
+    reload();
+    alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
+  };
+  const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
+  return(
+    <div>
+      <div className="card" style={{padding:18,marginBottom:18}}>
+        <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
+        {!pedidos.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>No hay mesas abiertas en este momento.</div>}
+        {pedidos.map((p,i)=>{const tot=items.filter(i2=>i2.pedido_id===p.id).reduce((s,i2)=>s+Number(i2.precio)*i2.cantidad,0);return(
+          <div key={p.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>Mesa {p.mesa_numero}</div><div style={{fontSize:12,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div></div>
+            <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:16}}>{money(tot)}</div>
+            <select className="field" style={{width:160}} value={metodo[p.id]||"efectivo"} onChange={e=>setMetodo({...metodo,[p.id]:e.target.value})}>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+        );})}
+        {pedidos.length>0&&(
+          <div style={{marginTop:16,borderTop:"2px solid var(--line)",paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"var(--primary-dark)"}}>Total acumulado: {money(totalGeneral)}</div>
+            <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja}>💰 Cerrar caja del día</button>
+          </div>
+        )}
+      </div>
+      <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
+      {!cierres.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no realizaste ningún cierre de caja.</div>}
+      <div className="card" style={{overflow:"hidden"}}>
+        {cierres.map((c,i)=>(
+          <div key={c.id} style={{padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+              <div><div style={{fontWeight:700}}>{c.fecha}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{c.cantidad_mesas} mesa{c.cantidad_mesas!==1?"s":""} atendidas</div></div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:"var(--primary-dark)"}}>{money(c.total_general)}</div>
+            </div>
+            <div style={{fontSize:12,color:"var(--ink-soft)",marginTop:4,display:"flex",gap:16,flexWrap:"wrap"}}>
+              <span>💵 Efectivo: {money(c.total_efectivo)}</span>
+              <span>💳 Tarjeta: {money(c.total_tarjeta)}</span>
+              <span>🏦 Transf.: {money(c.total_transferencia)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
+
