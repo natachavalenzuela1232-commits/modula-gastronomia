@@ -192,8 +192,18 @@ function TopBar({titulo,identidad,cambiar,logout}){
 
 // ---- VISTA MOZO ----
 function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,logout}){
-  const[mesaId,setMesaId]=useState(null);
+  const[mesaId,setMesaId]=useState(()=>localStorage.getItem("modula_mesa")||null);
   const[acl,setAcl]=useState("");
+  useEffect(()=>{
+    if(mesaId)localStorage.setItem("modula_mesa",mesaId);
+    else localStorage.removeItem("modula_mesa");
+  },[mesaId]);
+  useEffect(()=>{
+    if(mesaId&&mesas.length){
+      const m=mesas.find(mm=>mm.id===mesaId);
+      if(!m||m.estado!=="ocupada"||m.mozo_id!==identidad.id)setMesaId(null);
+    }
+  },[mesas]);
   const misMesas=mesas.filter(m=>m.estado==="libre"||m.mozo_id===identidad.id);
   const mesaSel=mesaId?mesas.find(m=>m.id===mesaId):null;
   const pedSel=mesaSel?pedidos.find(p=>p.mesa_id===mesaSel.id):null;
@@ -302,7 +312,7 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
                     {i.aclaracion&&<div style={{fontSize:12,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
-                                        <div style={{fontSize:11,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                    <div style={{fontSize:11,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
                   </div>
                   {i.estado==="pendiente"?<button className="bp" style={{fontSize:12,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
                 </div>
@@ -317,7 +327,8 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
 
 // ---- VISTA DUEÑO ----
 function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,reload,cambiar,logout}){
-  const[tab,setTab]=useState("mesas");
+  const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
+  const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
@@ -383,6 +394,10 @@ function PanelEmpleados({userId,empleados,reload}){
   const add=async()=>{if(!form.nombre||!form.pin)return;await sb.from("empleados").insert({...form,user_id:userId});setForm({nombre:"",rol:"mozo",pin:""});setOpen(false);reload();};
   const toggle=async e=>{await sb.from("empleados").update({activo:!e.activo}).eq("id",e.id);reload();};
   const del=async id=>{if(confirm("¿Eliminar este empleado?")){{await sb.from("empleados").delete().eq("id",id);reload();}}};
+  const[editId,setEditId]=useState(null);
+  const[editForm,setEditForm]=useState({});
+  const abrirEdicion=e=>{setEditId(e.id);setEditForm({nombre:e.nombre,rol:e.rol,pin:e.pin});};
+  const guardarEdicion=async()=>{await sb.from("empleados").update(editForm).eq("id",editId);setEditId(null);reload();};
   return(
     <div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
@@ -393,10 +408,19 @@ function PanelEmpleados({userId,empleados,reload}){
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       <div className="card" style={{overflow:"hidden"}}>
-        {empleados.map((e,i)=>(
-          <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
+        {empleados.map((e,i)=>editId===e.id?(
+          <div key={e.id} style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:i?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
+            <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={ev=>setEditForm({...editForm,nombre:ev.target.value})}/></div>
+            <div><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={editForm.rol} onChange={ev=>setEditForm({...editForm,rol:ev.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+            <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" value={editForm.pin} onChange={ev=>setEditForm({...editForm,pin:ev.target.value.replace(/\D/g,"")})}/></div>
+            <button className="bp" onClick={guardarEdicion}>Guardar</button>
+            <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
+          </div>
+        ):(
+          <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
             <div style={{flex:1}}><div style={{fontWeight:700}}>{e.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":"Cocina"} · PIN {e.pin}</div></div>
             <span className="tag" style={{background:e.activo?"var(--accent-tint)":"var(--surface-2)",color:e.activo?"var(--accent)":"var(--ink-soft)"}}>{e.activo?"Activo":"Inactivo"}</span>
+            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(e)}>✏️ Editar</button>
             <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(e)}>{e.activo?"Desactivar":"Activar"}</button>
             <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(e.id)}>🗑</button>
           </div>
@@ -490,6 +514,13 @@ function PanelStock({userId,insumos,reload}){
     setCompra({insumo_id:"",cantidad:"",precio_unitario:""});setOpenC(false);reload();
   };
   const del=async id=>{if(confirm("¿Eliminar este insumo?")){{await sb.from("insumos").delete().eq("id",id);reload();}}};
+  const[editId,setEditId]=useState(null);
+  const[editForm,setEditForm]=useState({});
+  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
+  const guardarEdicion=async()=>{
+    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:Number(editForm.precio_compra)||0}).eq("id",editId);
+    setEditId(null);reload();
+  };
   const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   return(
     <div>
@@ -521,10 +552,20 @@ function PanelStock({userId,insumos,reload}){
       </div>}
       {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
-                {bajos.map(i=><div key={i.id} style={{fontSize:13.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
+        {bajos.map(i=><div key={i.id} style={{fontSize:13.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
       </div>}
       <div className="card" style={{overflow:"hidden"}}>
-        {insumos.map((i,idx)=>(
+        {insumos.map((i,idx)=>editId===i.id?(
+          <div key={i.id} style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:idx?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
+            <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+            <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}/></div>
+            <div style={{width:90}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/></div>
+            <div style={{width:90}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/></div>
+            <div style={{width:110}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:e.target.value})}/></div>
+            <button className="bp" onClick={guardarEdicion}>Guardar</button>
+            <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
+          </div>
+        ):(
           <div key={i.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:idx?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
             <div style={{flex:1}}><div style={{fontWeight:700}}>{i.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
             <div style={{textAlign:"right"}}>
@@ -532,6 +573,7 @@ function PanelStock({userId,insumos,reload}){
               <div style={{fontSize:11,color:"var(--ink-soft)"}}>mín: {i.stock_minimo}</div>
             </div>
             <span className="tag" style={{background:i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)"}}>{i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
+            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
             <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(i.id)}>🗑</button>
           </div>
         ))}
@@ -602,4 +644,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
-
+     
