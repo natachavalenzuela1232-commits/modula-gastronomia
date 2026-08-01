@@ -547,7 +547,7 @@ function PanelStock({userId,insumos,compras,reload}){
             </select>
           </div>
           <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad comprada</label><input className="field" type="number" style={{width:110}} value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:e.target.value})}/></div>
-          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio por unidad</label><input className="field" type="number" style={{width:120}} value={compra.precio_unitario} onChange={e=>setCompra({...compra,precio_unitario:e.target.value})}/></div>
+                    <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio por unidad</label><input className="field" type="number" style={{width:120}} value={compra.precio_unitario} onChange={e=>setCompra({...compra,precio_unitario:e.target.value})}/></div>
           <button className="bp" style={{background:"var(--accent)"}} onClick={registrarCompra}>Registrar</button>
         </div>
       </div>}
@@ -584,14 +584,13 @@ function PanelStock({userId,insumos,compras,reload}){
       {!compras.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no registraste ninguna compra.</div>}
       <div className="card" style={{overflow:"hidden"}}>
         {compras.map((c,i)=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
-          <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
-            <div key={c.id} style={{padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+          <div key={c.id} style={{padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
               <div style={{fontWeight:700}}>{ins?.nombre||"Insumo eliminado"}</div>
               <div style={{fontWeight:700,color:"var(--primary-dark)",whiteSpace:"nowrap"}}>{money(c.cantidad*c.precio_unitario)}</div>
             </div>
-          <div style={{fontSize:12,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
-        </div>
+            <div style={{fontSize:12,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
+          </div>
         );})}
       </div>
     </div>
@@ -659,5 +658,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+
 
   
