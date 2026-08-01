@@ -585,11 +585,13 @@ function PanelStock({userId,insumos,compras,reload}){
       <div className="card" style={{overflow:"hidden"}}>
         {compras.map((c,i)=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
           <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
-            <div style={{fontSize:12,color:"var(--ink-soft)",width:90}}>{c.fecha}</div>
-            <div style={{flex:1,fontWeight:700}}>{ins?.nombre||"Insumo eliminado"}</div>
-            <div style={{fontSize:13}}>{c.cantidad} {ins?.unidad||""}</div>
-            <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(c.cantidad*c.precio_unitario)}</div>
-          </div>
+            <div key={c.id} style={{padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+<div style={{fontWeight:700}}>{ins?.nombre||"Insumo eliminado"}</div>
+<div style={{fontWeight:700,color:"var(--primary-dark)",whiteSpace:"nowrap"}}>{money(c.cantidad*c.precio_unitario)}</div>
+</div>
+<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
+</div>
         );})}
       </div>
     </div>
