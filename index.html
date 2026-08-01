@@ -123,7 +123,7 @@ function SelectorIdentidad({empleados,onElegir}){
 function App(){
   const[session,setSession]=useState(undefined);
   const[identidad,setIdentidad]=useState(null);
-  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[]});
+  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[]});
   const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
@@ -134,7 +134,7 @@ function App(){
 
   const loadAll=async()=>{
     setLoading(true);
-    const[e,m,mn,p,it,ins,rec,ci]=await Promise.all([
+    const[e,m,mn,p,it,ins,rec,ci,cp]=await Promise.all([
       sb.from("empleados").select("*").order("created_at"),
       sb.from("mesas").select("*").order("numero"),
       sb.from("menu_items").select("*").order("categoria"),
@@ -143,11 +143,12 @@ function App(){
       sb.from("insumos").select("*").order("nombre"),
       sb.from("recetas").select("*"),
       sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(30),
+      sb.from("compras").select("*").order("created_at",{ascending:false}).limit(100),
     ]);
     setData({
       empleados:e.data||[],mesas:m.data||[],menu:mn.data||[],
       pedidos:p.data||[],items:it.data||[],insumos:ins.data||[],
-      recetas:rec.data||[],cierres:ci.data||[],
+      recetas:rec.data||[],cierres:ci.data||[],compras:cp.data||[],
     });
     setLoading(false);
   };
@@ -326,7 +327,7 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
 }
 
 // ---- VISTA DUEÑO ----
-function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,reload,cambiar,logout}){
+function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,reload,cambiar,logout}){
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
@@ -358,7 +359,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
-        {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} reload={reload}/>}
+        {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
         {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
       </main>
     </div>
@@ -499,7 +500,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   );
 }
 
-function PanelStock({userId,insumos,reload}){
+function PanelStock({userId,insumos,compras,reload}){
   const[form,setForm]=useState({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});
   const[open,setOpen]=useState(false);
   const[compra,setCompra]=useState({insumo_id:"",cantidad:"",precio_unitario:""});
@@ -529,7 +530,7 @@ function PanelStock({userId,insumos,reload}){
         <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);}}>📥 Registrar compra</button>
       </div>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
+                <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
@@ -578,6 +579,18 @@ function PanelStock({userId,insumos,reload}){
           </div>
         ))}
         {!insumos.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
+      </div>
+      <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",margin:"24px 0 12px"}}>HISTORIAL DE COMPRAS</div>
+      {!compras.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no registraste ninguna compra.</div>}
+      <div className="card" style={{overflow:"hidden"}}>
+        {compras.map((c,i)=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
+          <div key={c.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
+            <div style={{fontSize:12,color:"var(--ink-soft)",width:90}}>{c.fecha}</div>
+            <div style={{flex:1,fontWeight:700}}>{ins?.nombre||"Insumo eliminado"}</div>
+            <div style={{fontSize:13}}>{c.cantidad} {ins?.unidad||""}</div>
+            <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(c.cantidad*c.precio_unitario)}</div>
+          </div>
+        );})}
       </div>
     </div>
   );
@@ -644,4 +657,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
-     
+
+  
