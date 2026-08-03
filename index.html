@@ -296,7 +296,9 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   }
   // ---- vista cocina ----
   function VistaCocina({identidad,items,cambiar,logout,reload})}
-  
+  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
+  const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
       <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
