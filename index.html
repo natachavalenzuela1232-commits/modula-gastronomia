@@ -191,9 +191,17 @@ function App(){
 }
 
 // ---- VISTA MOZO ----
-function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,logout}){
+VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,logout}){
   const[mesaId,setMesaId]=useState(()=>localStorage.getItem("modula_mesa")||null);
   const[acl,setAcl]=useState("");
+  const[pidiendoPago,setPidiendoPago]=useState(false);
+  const[cobrosHoy,setCobrosHoy]=useState([]);
+  const cargarCobrosHoy=async()=>{
+    const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
+    const hoyStr=hoy();
+    setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
+  };
+  useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
     else localStorage.removeItem("modula_mesa");
@@ -223,12 +231,11 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   };
   const borrarItem=async i=>{if(i.estado==="pendiente"){await sb.from("pedido_items").delete().eq("id",i.id);reload();}};
   const marcarEntregado=async i=>{await sb.from("pedido_items").update({estado:"entregado"}).eq("id",i.id);reload();};
-  const cerrarMesa=async()=>{
-    if(!confirm("¿Cerrar la mesa?"))return;
+  const cerrarMesa=async metodo=>{
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
-    await sb.from("pedidos").update({estado:"cerrada",total,cerrado_at:new Date().toISOString()}).eq("id",pedSel.id);
+    await sb.from("pedidos").update({estado:"cerrada",total,metodo_pago:metodo,cerrado_at:new Date().toISOString()}).eq("id",pedSel.id);
     await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",mesaSel.id);
-    setMesaId(null);reload();
+    setPidiendoPago(false);setMesaId(null);reload();cargarCobrosHoy();
   };
   const cats=[...new Set(menu.filter(m=>m.activo).map(m=>m.categoria))];
   if(mesaSel){
@@ -270,7 +277,19 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
             ))}
             {!menu.length&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>El dueño todavía no cargó el menú.</div>}
           </div>
-          <button className="bp" style={{width:"100%",padding:14}} onClick={cerrarMesa} disabled={!itemsMesa.length}>Cerrar mesa y pedir la cuenta</button>
+          {!pidiendoPago?(
+            <button className="bp" style={{width:"100%",padding:14}} onClick={()=>setPidiendoPago(true)} disabled={!itemsMesa.length}>Cerrar mesa y pedir la cuenta</button>
+          ):(
+            <div className="card" style={{padding:16}}>
+              <div style={{fontWeight:700,marginBottom:12,textAlign:"center"}}>¿Cómo pagó el cliente?</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
+              </div>
+              <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -279,6 +298,22 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
     <div>
       <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
       <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        {cobrosHoy.length>0&&(()=>{
+          const ef=cobrosHoy.filter(p=>p.metodo_pago==="efectivo").reduce((s,p)=>s+Number(p.total),0);
+          const tar=cobrosHoy.filter(p=>p.metodo_pago==="tarjeta").reduce((s,p)=>s+Number(p.total),0);
+          const tr=cobrosHoy.filter(p=>p.metodo_pago==="transferencia").reduce((s,p)=>s+Number(p.total),0);
+          return(
+            <div className="card" style={{padding:16,marginBottom:16,background:"var(--primary-tint)",border:"none"}}>
+              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
+              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
+              <div style={{fontSize:12.5,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
+                <span>💵 Efectivo: {money(ef)}</span>
+                <span>💳 Tarjeta: {money(tar)}</span>
+                <span>🏦 Transf.: {money(tr)}</span>
+              </div>
+            </div>
+          );
+        })()}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
           {misMesas.map(m=>(
             <button key={m.id} className="mesabtn" style={{borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",background:m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
@@ -292,6 +327,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
     </div>
   );
 }
+
 
 // ---- VISTA COCINA ----
 function VistaCocina({identidad,items,cambiar,logout,reload}){
