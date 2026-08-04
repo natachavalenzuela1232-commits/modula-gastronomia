@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -227,32 +227,20 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   };
   const agregarItem=async mi=>{
     if(!pedSel)return;
-    const aclaracionActual=acl.trim()||null;
-    const existente=itemsMesa.find(i=>i.menu_item_id===mi.id&&i.aclaracion===aclaracionActual&&i.estado==="pendiente");
-    if(existente){
-      await sb.from("pedido_items").update({cantidad:(Number(existente.cantidad)||1)+1}).eq("id",existente.id);
-    }else{
-      await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:aclaracionActual,estado:"pendiente",cantidad:1});
-    }
+    await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:"pendiente"});
     setAcl("");reload();
-  };
-  const cambiarCantidad=async(i,delta)=>{
-    const nueva=(Number(i.cantidad)||1)+delta;
-    if(nueva<=0){await sb.from("pedido_items").delete().eq("id",i.id);}
-    else{await sb.from("pedido_items").update({cantidad:nueva}).eq("id",i.id);}
-    reload();
   };
   const borrarItem=async i=>{if(i.estado==="pendiente"){await sb.from("pedido_items").delete().eq("id",i.id);reload();}};
   const marcarEntregado=async i=>{await sb.from("pedido_items").update({estado:"entregado"}).eq("id",i.id);reload();};
   const cerrarMesa=async metodo=>{
-    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*(i.cantidad||1),0);
+    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     await sb.from("pedidos").update({estado:"cerrada",total,metodo_pago:metodo,cerrado_at:new Date().toISOString()}).eq("id",pedSel.id);
     await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",mesaSel.id);
     setPidiendoPago(false);setMesaId(null);reload();cargarCobrosHoy();
   };
   const cats=[...new Set(menu.filter(m=>m.activo).map(m=>m.categoria))];
   if(mesaSel){
-    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*(i.cantidad||1),0);
+    const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     return(
       <div>
         <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
@@ -262,20 +250,14 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
             <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
             {itemsMesa.map(i=>(
-              <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)",flexWrap:"wrap"}}>
+              <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)"}}>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
-                  <div style={{fontSize:11,color:"var(--ink-soft)"}}>{money(i.precio)} x {i.cantidad||1} = {money(Number(i.precio)*(i.cantidad||1))} · {hora(i.created_at)}</div>
+                  <div style={{fontSize:11,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
                 </div>
-                {i.estado==="pendiente"&&(
-                  <div style={{display:"flex",alignItems:"center",gap:6}}>
-                    <button className="bg" style={{padding:"4px 9px",fontSize:13,fontWeight:800}} onClick={()=>cambiarCantidad(i,-1)}>−</button>
-                    <span style={{fontWeight:800,fontSize:14,minWidth:18,textAlign:"center"}}>{i.cantidad||1}</span>
-                    <button className="bg" style={{padding:"4px 9px",fontSize:13,fontWeight:800}} onClick={()=>cambiarCantidad(i,1)}>+</button>
-                  </div>
-                )}
                 <span className="tag" style={{background:i.estado==="pendiente"?"var(--warn-tint)":i.estado==="listo"?"var(--accent-tint)":"var(--surface-2)",color:i.estado==="pendiente"?"var(--warn)":i.estado==="listo"?"var(--accent)":"var(--ink-soft)"}}>{i.estado==="pendiente"?"En cocina":i.estado==="listo"?"¡Listo!":"Entregado"}</span>
                 {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:11.5}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
+                {i.estado==="pendiente"&&<button className="bg" style={{padding:"6px 8px",fontSize:11.5}} onClick={()=>borrarItem(i)}>✕</button>}
               </div>
             ))}
             {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(total)}</div>}
@@ -304,8 +286,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=          
-          </div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
+              </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -315,7 +297,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   }
   return(
     <div>
-      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
+      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>                  
       <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
         {cobrosHoy.length>0&&(()=>{
           const ef=cobrosHoy.filter(p=>p.metodo_pago==="efectivo").reduce((s,p)=>s+Number(p.total),0);
@@ -364,7 +346,7 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
               {its.map(i=>(
                 <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:"1px solid var(--line)"}}>
                   <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}{(i.cantidad||1)>1&&<span style={{color:"var(--primary)"}}> x{i.cantidad}</span>}</div>
+                    <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
                     {i.aclaracion&&<div style={{fontSize:12,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
                     <div style={{fontSize:11,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
                   </div>
@@ -384,7 +366,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
-  const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*(i.cantidad||1),0);},0);
+  const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
@@ -429,7 +411,7 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
         <button className="bp" onClick={crear}>Agregar</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
-        {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*(i.cantidad||1),0);return(
+        {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);return(
           <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
             <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
             <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
@@ -604,7 +586,7 @@ function PanelStock({userId,insumos,compras,reload}){
       </div>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
-          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
+        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio compra</label><input className="field" type="number" style={{width:110}} value={form.precio_compra} onChange={e=>setForm({...form,precio_compra:e.target.value})} placeholder="500"/></div>
@@ -678,19 +660,19 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
   const cerrarCaja=async()=>{
     if(!confirm("¿Cerrar la caja del día?"))return;
     let ef=0,tar=0,tr=0,mesas=0;
-    pedidos.forEach(p=>{const met=metodo[p.id]||"efectivo";const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*(i.cantidad||1),0);if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;mesas++;});
+    pedidos.forEach(p=>{const met=metodo[p.id]||"efectivo";const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;mesas++;});
     const total=ef+tar+tr;
     await sb.from("cierres_caja").insert({user_id:userId,fecha:hoy(),total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesas});
     reload();
     alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
   };
-  const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*(i.cantidad||1),0),0);
+  const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
       <div className="card" style={{padding:18,marginBottom:18}}>
         <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
         {!pedidos.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>No hay mesas abiertas en este momento.</div>}
-        {pedidos.map((p,i)=>{const tot=items.filter(i2=>i2.pedido_id===p.id).reduce((s,i2)=>s+Number(i2.precio)*(i2.cantidad||1),0);return(
+        {pedidos.map((p,i)=>{const tot=items.filter(i2=>i2.pedido_id===p.id).reduce((s,i2)=>s+Number(i2.precio)*i2.cantidad,0);return(
           <div key={p.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
             <div style={{flex:1}}><div style={{fontWeight:700}}>Mesa {p.mesa_numero}</div><div style={{fontSize:12,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div></div>
             <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:16}}>{money(tot)}</div>
