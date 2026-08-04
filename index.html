@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -45,6 +45,17 @@ input,select,textarea{font-family:inherit}
 </head>
 <body>
 <div id="root"></div>
+<script>
+window.addEventListener("error", function(e){
+  document.getElementById("root").innerHTML =
+    '<div style="padding:24px;font-family:monospace;font-size:13px;color:#900;white-space:pre-wrap;background:#fff0f0;min-height:100vh;">'
+    + '⚠️ ERROR EN EL PROGRAMA\n\n'
+    + 'Mensaje: ' + e.message + '\n'
+    + 'Línea: ' + e.lineno + '\n'
+    + 'Columna: ' + e.colno
+    + '</div>';
+});
+</script>
 <script type="text/babel">
 const{useState,useEffect,useRef}=React;
 const SUPABASE_URL="https://zibuxcbidjymrlvdsgse.supabase.co";
@@ -227,7 +238,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   };
   const agregarItem=async mi=>{
     if(!pedSel)return;
-    await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:"pendiente"});
+    await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"});
     setAcl("");reload();
   };
   const borrarItem=async i=>{if(i.estado==="pendiente"){await sb.from("pedido_items").delete().eq("id",i.id);reload();}};
@@ -286,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
-              </div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                   
+</div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -297,7 +308,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   }
   return(
     <div>
-      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>                  
+      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
       <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
         {cobrosHoy.length>0&&(()=>{
           const ef=cobrosHoy.filter(p=>p.metodo_pago==="efectivo").reduce((s,p)=>s+Number(p.total),0);
@@ -474,13 +485,14 @@ function opcionesUnidad(unidadBase){
   return[{label:unidadBase||"unidad",factor:1}];
 }
 function PanelMenu({userId,menu,insumos,recetas,reload}){
-  const[form,setForm]=useState({nombre:"",categoria:"",precio:""});
+  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true});
   const[open,setOpen]=useState(false);
   const[selItem,setSelItem]=useState(null);
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
   const[busqueda,setBusqueda]=useState("");
-  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:""});setOpen(false);reload();};
+  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
+  const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
   const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
@@ -524,6 +536,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
         <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/></div>
+        <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
@@ -539,6 +552,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                   <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)"}}>{m.activo?"Activo":"Pausado"}</span>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                 </div>
                 {selItem?.id===m.id&&<RecetaEditor item={m}/>}
