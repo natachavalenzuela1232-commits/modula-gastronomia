@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -177,7 +177,8 @@ function App(){
   if(identidad.rol==="cocina")return<VistaCocina {...props}/>;
   return null;
 }
-  function TopBar({titulo,identidad,cambiar,logout}){
+
+function TopBar({titulo,identidad,cambiar,logout}){
   return(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"var(--surface)",borderBottom:"1px solid var(--line)"}}>
       <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
@@ -294,11 +295,6 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
       </div>
     );
   }
-  // ---- vista cocina ----
-  function VistaCocina({identidad,items,cambiar,logout,reload})}
-  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
-  const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
-  const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
       <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
@@ -309,8 +305,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
           const tr=cobrosHoy.filter(p=>p.metodo_pago==="transferencia").reduce((s,p)=>s+Number(p.total),0);
           return(
             <div className="card" style={{padding:16,marginBottom:16,background:"var(--primary-tint)",border:"none"}}>
-              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
+              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""}    
+                <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
               <div style={{fontSize:12.5,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
                 <span>💵 Efectivo: {money(ef)}</span>
                 <span>💳 Tarjeta: {money(tar)}</span>
@@ -332,75 +328,6 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
     </div>
   );
 }
-
-  return(
-    <div>
-      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
-      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
-        {cobrosHoy.length>0&&(()=>{
-          const ef=cobrosHoy.filter(p=>p.metodo_pago==="efectivo").reduce((s,p)=>s+Number(p.total),0);
-          const tar=cobrosHoy.filter(p=>p.metodo_pago==="tarjeta").reduce((s,p)=>s+Number(p.total),0);
-          const tr=cobrosHoy.filter(p=>p.metodo_pago==="transferencia").reduce((s,p)=>s+Number(p.total),0);
-          return(
-            <div className="card" style={{padding:16,marginBottom:16,background:"var(--primary-tint)",border:"none"}}>
-              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
-              <div style={{fontSize:12.5,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
-                <span>💵 Efectivo: {money(ef)}</span>
-                <span>💳 Tarjeta: {money(tar)}</span>
-                <span>🏦 Transf.: {money(tr)}</span>
-              </div>
-            </div>
-          );
-        })()}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
-          {misMesas.map(m=>(
-            <button key={m.id} className="mesabtn" style={{borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",background:m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
-              Mesa {m.numero}
-              <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
-            </button>
-          ))}
-        </div>
-        {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14,marginTop:20}}>El dueño todavía no cargó las mesas.</div>}
-      </div>
-    </div>
-  );
-}
-
-  return(
-    <div>
-      <TopBar titulo="Mis mesas" identidad={identidad} cambiar={cambiar} logout={logout}/>
-      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
-        {cobrosHoy.length>0&&(()=>{
-          const ef=cobrosHoy.filter(p=>p.metodo_pago==="efectivo").reduce((s,p)=>s+Number(p.total),0);
-          const tar=cobrosHoy.filter(p=>p.metodo_pago==="tarjeta").reduce((s,p)=>s+Number(p.total),0);
-          const tr=cobrosHoy.filter(p=>p.metodo_pago==="transferencia").reduce((s,p)=>s+Number(p.total),0);
-          return(
-            <div className="card" style={{padding:16,marginBottom:16,background:"var(--primary-tint)",border:"none"}}>
-              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
-              <div style={{fontSize:12.5,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
-                <span>💵 Efectivo: {money(ef)}</span>
-                <span>💳 Tarjeta: {money(tar)}</span>
-                <span>🏦 Transf.: {money(tr)}</span>
-              </div>
-            </div>
-          );
-        })()}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
-          {misMesas.map(m=>(
-            <button key={m.id} className="mesabtn" style={{borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",background:m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
-              Mesa {m.numero}
-              <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
-            </button>
-          ))}
-        </div>
-        {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14,marginTop:20}}>El dueño todavía no cargó las mesas.</div>}
-      </div>
-    </div>
-  );
-}
-
 
 // ---- VISTA COCINA ----
 function VistaCocina({identidad,items,cambiar,logout,reload}){
@@ -432,9 +359,9 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
       </div>
     </div>
   );
-  }
+}
 
-// ---- VISTA DUEÑO ----
+        // ---- VISTA DUEÑO ----
 function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,reload,cambiar,logout}){
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
@@ -495,9 +422,9 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
       </div>
     </div>
   );
-}
+ }
 
-function PanelEmpleados({userId,empleados,reload}){
+    function PanelEmpleados({userId,empleados,reload}){
   const[form,setForm]=useState({nombre:"",rol:"mozo",pin:""});
   const[open,setOpen]=useState(false);
   const add=async()=>{if(!form.nombre||!form.pin)return;await sb.from("empleados").insert({...form,user_id:userId});setForm({nombre:"",rol:"mozo",pin:""});setOpen(false);reload();};
@@ -538,8 +465,9 @@ function PanelEmpleados({userId,empleados,reload}){
       </div>
     </div>
   );
-                                          }
-  function opcionesUnidad(unidadBase){
+}
+
+function opcionesUnidad(unidadBase){
   const u=(unidadBase||"").toLowerCase();
   if(u.startsWith("kilogramo")||u==="kg")return[{label:"Kilogramos",factor:1},{label:"Gramos",factor:0.001}];
   if(u.startsWith("litro")||u==="l")return[{label:"Litros",factor:1},{label:"Mililitros",factor:0.001}];
@@ -617,7 +545,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
               </React.Fragment>
             );})}
           </div>
-        </div>
+          </div>
       ))}
       {!menu.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste el menú.</div>}
       {menu.length>0&&!cats.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>No se encontró ningún plato o bebida con ese nombre.</div>}
@@ -695,7 +623,7 @@ function PanelStock({userId,insumos,compras,reload}){
             <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
           </div>
         ):(
-          <div key={i.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:idx?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
+   <div key={i.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:idx?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
             <div style={{flex:1}}><div style={{fontWeight:700}}>{i.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
             <div style={{textAlign:"right"}}>
               <div style={{fontWeight:800,fontSize:15,color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{i.stock_actual} {i.unidad}</div>
