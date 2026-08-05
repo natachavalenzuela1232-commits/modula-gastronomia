@@ -1,4 +1,4 @@
-      <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,7 +297,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                   
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                     
 </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
@@ -495,6 +495,10 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
+  const[editId,setEditId]=useState(null);
+  const[editForm,setEditForm]=useState({});
+  const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio)});};
+   const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0}).eq("id",editId);setEditId(null);reload();};
   const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
   const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
   const menuFiltrado=menu.filter(m=>m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
@@ -546,15 +550,26 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
           <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <React.Fragment key={m.id}>
+                {editId===m.id?(
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:i?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
+                    <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+                    <div style={{width:130}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
+                    <div style={{width:110}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value})}/></div>
+                    <button className="bp" onClick={guardarEdicion}>Guardar</button>
+                    <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
+                  </div>
+                ):(
                 <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
                   <div style={{flex:1}}><div style={{fontWeight:700}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
                   <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(m.precio)}</div>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                   <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)"}}>{m.activo?"Activo":"Pausado"}</span>
+                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                   <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                 </div>
+                )}
                 {selItem?.id===m.id&&<RecetaEditor item={m}/>}
               </React.Fragment>
             );})}
@@ -680,7 +695,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
     reload();
     alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
   };
-  const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
+   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
       <div className="card" style={{padding:18,marginBottom:18}}>
@@ -728,4 +743,4 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>
+</html>     
