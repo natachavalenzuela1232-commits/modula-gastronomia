@@ -144,7 +144,6 @@ function App(){
   },[]);
 
   const loadAll=async()=>{
-    setLoading(true);
     const[e,m,mn,p,it,ins,rec,ci,cp]=await Promise.all([
       sb.from("empleados").select("*").order("created_at"),
       sb.from("mesas").select("*").order("numero"),
@@ -298,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
-               </div>
-              <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
+              </div>    
+               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
         </div>
@@ -408,8 +407,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
         {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
       </main>
-     </div>
-  );
+    </div>
+     );
 }
 
 function PanelMesas({userId,mesas,pedidos,items,reload}){
@@ -548,8 +547,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:18}}>
-         <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
-          <div className="card" style={{overflow:"hidden"}}>
+          <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+           <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <React.Fragment key={m.id}>
                 {editId===m.id?(
