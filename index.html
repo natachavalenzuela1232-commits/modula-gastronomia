@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -207,6 +207,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
   const[acl,setAcl]=useState("");
   const[pidiendoPago,setPidiendoPago]=useState(false);
   const[cobrosHoy,setCobrosHoy]=useState([]);
+  const[cobroAbierto,setCobroAbierto]=useState(null);
   const cargarCobrosHoy=async()=>{
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
@@ -297,8 +298,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
-</div>  
- <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
+               </div>
+              <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
         </div>
@@ -322,16 +323,43 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
                 <span>💳 Tarjeta: {money(tar)}</span>
                 <span>🏦 Transf.: {money(tr)}</span>
               </div>
+              <div style={{marginTop:12,borderTop:"1px solid rgba(140,47,8,0.15)",paddingTop:10}}>
+                {[...cobrosHoy].sort((a,b)=>new Date(b.cerrado_at)-new Date(a.cerrado_at)).map(p=>{
+                  const itemsP=items.filter(i=>i.pedido_id===p.id);
+                  const abierto=cobroAbierto===p.id;
+                  return(
+                    <div key={p.id} style={{padding:"4px 0"}}>
+                      <div onClick={()=>setCobroAbierto(abierto?null:p.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12.5,padding:"4px 0",color:"var(--primary-dark)",cursor:"pointer"}}>
+                        <span>{abierto?"▾":"▸"} Mesa {p.mesa_numero} · {p.metodo_pago==="efectivo"?"💵":p.metodo_pago==="tarjeta"?"💳":"🏦"} {hora(p.cerrado_at)}</span>
+                        <span style={{fontWeight:700}}>{money(p.total)}</span>
+                      </div>
+                      {abierto&&<div style={{background:"rgba(255,255,255,0.5)",borderRadius:8,padding:"6px 10px",marginBottom:6}}>
+                        {itemsP.map(i=>(
+                          <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",color:"var(--ink)"}}>
+                            <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</span>
+                            <span>{money(i.precio)}</span>
+                          </div>
+                        ))}
+                        {!itemsP.length&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Sin detalle de items.</div>}
+                      </div>}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           );
         })()}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
-          {misMesas.map(m=>(
-            <button key={m.id} className="mesabtn" style={{borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",background:m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
+          {misMesas.map(m=>{
+            const pedM=pedidos.find(p=>p.mesa_id===m.id);
+            const tieneListo=pedM?items.some(i=>i.pedido_id===pedM.id&&i.estado==="listo"):false;
+            return(
+            <button key={m.id} className="mesabtn" style={{borderColor:tieneListo?"var(--accent)":m.estado==="ocupada"?"var(--primary)":"var(--line)",background:tieneListo?"var(--accent-tint)":m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
               Mesa {m.numero}
               <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
+              {tieneListo&&<span className="tag" style={{background:"var(--accent)",color:"white"}}>🔔 Listo para retirar</span>}
             </button>
-          ))}
+          );})}
         </div>
         {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14,marginTop:20}}>El dueño todavía no cargó las mesas.</div>}
       </div>
@@ -420,7 +448,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
       <main style={{flex:1,padding:"26px 32px",maxWidth:1000}}>
         <div className="card" style={{padding:"16px 20px",marginBottom:22,background:"var(--primary-tint)",border:"none",display:"flex",flexWrap:"wrap",gap:24}}>
           <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>VENTA DE HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{money(totalHoy)}</div></div>
-          <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
+         <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
           {stockBajo.length>0&&<div><div style={{fontSize:11.5,fontWeight:800,color:"var(--warn)"}}>⚠ STOCK BAJO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--warn)"}}>{stockBajo.length} insumo{stockBajo.length!==1?"s":""}</div></div>}
           <div style={{marginLeft:"auto",alignSelf:"center"}}><button className="bp" onClick={generarResumen} disabled={resumenLoading}>{resumenLoading?"Generando…":"✨ Resumen del día"}</button></div>
         </div>
@@ -447,8 +475,8 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
         {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);return(
           <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
-            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>         
-      <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
+            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
+            <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
             {m.estado==="ocupada"&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
           </div>
         );})}
@@ -570,7 +598,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       </div>}
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
-        <div key={cat} style={{marginBottom:18}}>
+     <div key={cat} style={{marginBottom:18}}>
           <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
           <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
@@ -647,8 +675,8 @@ function PanelStock({userId,insumos,compras,reload}){
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       {openC&&<div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
-        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>  
-         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div style={{flex:1}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
             <select className="field" value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
               <option value="">Elegir…</option>
