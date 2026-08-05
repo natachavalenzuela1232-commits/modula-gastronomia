@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -17,11 +17,11 @@
   --primary:#C1440E;--primary-dark:#8C2F08;--primary-tint:#FBE7DA;
   --accent:#2F7E68;--accent-tint:#E1F0EA;
   --warn:#C79A2E;--warn-tint:#FBF0D8;
-  --line:#E9DED2;--shadow:0 1px 2px rgba(43,33,27,.05),0 4px 16px rgba(43,33,27,.07);
+  --line:#E2D2BF;--shadow:0 1px 2px rgba(43,33,27,.05),0 4px 16px rgba(43,33,27,.07);
 }
 *{box-sizing:border-box}
 html,body,#root{margin:0;padding:0;min-height:100%;background:var(--bg)}
-body{font-family:'Manrope',sans-serif;color:var(--ink)}
+body{font-family:'Manrope',sans-serif;color:var(--ink);line-height:1.5}
 button{font-family:inherit;cursor:pointer}
 input,select,textarea{font-family:inherit}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
@@ -30,9 +30,9 @@ input,select,textarea{font-family:inherit}
 .bp{background:var(--primary);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;justify-content:center}
 .bp:hover{background:var(--primary-dark)}
 .bp:disabled{opacity:.55}
-.bg{background:transparent;border:1px solid var(--line);color:var(--ink-soft);padding:8px 12px;border-radius:9px;font-weight:600;font-size:13px}
+.bg{background:transparent;border:1px solid var(--line);color:var(--ink-soft);padding:8px 12px;border-radius:9px;font-weight:600;font-size:13.5px}
 .bg:hover{background:var(--surface-2)}
-.tag{font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.02em}
+.tag{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;letter-spacing:.02em}
 .mesabtn{border-radius:14px;padding:18px 10px;border:2px solid var(--line);background:var(--surface);font-weight:800;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:6px}
 @media(max-width:760px){
   .app-shell{flex-direction:column}
@@ -84,11 +84,11 @@ function Login(){
       <div className="card" style={{width:"100%",maxWidth:380,padding:32}}>
         <div style={{textAlign:"center",marginBottom:26}}>
           <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:24,color:"var(--primary-dark)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastronomía</span></div>
-          <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":"Creá la cuenta de tu negocio"}</div>
+          <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":"Creá la cuenta de tu negocio"}</div>
         </div>
-        <div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Email</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tunegocio@email.com"/></div>
-        <div style={{marginBottom:18}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><input className="field" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
-        {msg&&<div style={{fontSize:12.5,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
+        <div style={{marginBottom:12}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Email</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tunegocio@email.com"/></div>
+        <div style={{marginBottom:18}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><input className="field" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
+        {msg&&<div style={{fontSize:14,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
         <button className="bp" style={{width:"100%",padding:12}} onClick={submit} disabled={loading||!email||!pw}>{loading?"Un momento…":mode==="signin"?"Iniciar sesión":"Crear cuenta"}</button>
         <div style={{textAlign:"center",marginTop:16,fontSize:13}}>
           {mode==="signin"?<span style={{color:"var(--ink-soft)"}}>¿Primera vez? <a href="#" onClick={e=>{e.preventDefault();setMode("signup");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Creá la cuenta</a></span>:<span style={{color:"var(--ink-soft)"}}>¿Ya tenés? <a href="#" onClick={e=>{e.preventDefault();setMode("signin");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Iniciá sesión</a></span>}
@@ -112,16 +112,16 @@ function SelectorIdentidad({empleados,onElegir}){
             <button className="bp" style={{width:"100%",padding:14,marginBottom:10,fontSize:15}} onClick={()=>onElegir({rol:"dueño",id:null,nombre:"Dueño/a"})}>👑 Soy el dueño/a</button>
             {empleados.filter(e=>e.activo).map(e=>(
               <button key={e.id} className="bg" style={{width:"100%",padding:14,marginBottom:8,fontSize:14.5,textAlign:"left",display:"flex",alignItems:"center",gap:10}} onClick={()=>{setEli(e);setPin("");setErr("");}}>
-                {e.rol==="mozo"?"🧑‍🍳":"👨‍🍳"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:11.5,fontWeight:700}}>{e.rol==="mozo"?"MOZO":"COCINA"}</span>
+                {e.rol==="mozo"?"🧑‍🍳":"👨‍🍳"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:13,fontWeight:700}}>{e.rol==="mozo"?"MOZO":"COCINA"}</span>
               </button>
             ))}
-            {!empleados.filter(e=>e.activo).length&&<div style={{fontSize:12.5,color:"var(--ink-soft)",textAlign:"center",marginTop:8}}>El dueño puede agregar empleados desde su panel.</div>}
+            {!empleados.filter(e=>e.activo).length&&<div style={{fontSize:14,color:"var(--ink-soft)",textAlign:"center",marginTop:8}}>El dueño puede agregar empleados desde su panel.</div>}
           </React.Fragment>
         ):(
           <React.Fragment>
             <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:18,color:"var(--primary-dark)",textAlign:"center",marginBottom:16}}>Hola, {eli.nombre} — ingresá tu PIN</div>
             <input className="field" type="password" inputMode="numeric" value={pin} onChange={e=>setPin(e.target.value)} placeholder="PIN" style={{textAlign:"center",fontSize:20,letterSpacing:4,marginBottom:12}} onKeyDown={e=>e.key==="Enter"&&confirmar()} autoFocus/>
-            {err&&<div style={{color:"var(--primary)",fontSize:12.5,textAlign:"center",marginBottom:10}}>{err}</div>}
+            {err&&<div style={{color:"var(--primary)",fontSize:14,textAlign:"center",marginBottom:10}}>{err}</div>}
             <button className="bp" style={{width:"100%",padding:12,marginBottom:8}} onClick={confirmar}>Entrar</button>
             <button className="bg" style={{width:"100%"}} onClick={()=>setEli(null)}>Volver</button>
           </React.Fragment>
@@ -193,9 +193,9 @@ function TopBar({titulo,identidad,cambiar,logout}){
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"var(--surface)",borderBottom:"1px solid var(--line)"}}>
       <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <span style={{fontSize:12.5,color:"var(--ink-soft)",fontWeight:600}}>{identidad.nombre}</span>
-        <button className="bg" style={{padding:"6px 10px",fontSize:12}} onClick={cambiar}>Cambiar</button>
-        <button className="bg" style={{padding:"6px 10px",fontSize:12}} onClick={logout}>Salir</button>
+        <span style={{fontSize:14,color:"var(--ink-soft)",fontWeight:600}}>{identidad.nombre}</span>
+        <button className="bg" style={{padding:"6px 10px",fontSize:13.5}} onClick={cambiar}>Cambiar</button>
+        <button className="bg" style={{padding:"6px 10px",fontSize:13.5}} onClick={logout}>Salir</button>
       </div>
     </div>
   );
@@ -258,17 +258,17 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
         <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           <div className="card" style={{padding:16,marginBottom:16}}>
-            <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
+            <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
             {itemsMesa.map(i=>(
               <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)"}}>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:13.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
-                  <div style={{fontSize:11,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
+                  <div style={{fontSize:12.5,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
                 </div>
                 <span className="tag" style={{background:i.estado==="pendiente"?"var(--warn-tint)":i.estado==="listo"?"var(--accent-tint)":"var(--surface-2)",color:i.estado==="pendiente"?"var(--warn)":i.estado==="listo"?"var(--accent)":"var(--ink-soft)"}}>{i.estado==="pendiente"?"En cocina":i.estado==="listo"?"¡Listo!":"Entregado"}</span>
-                {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:11.5}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
-                {i.estado==="pendiente"&&<button className="bg" style={{padding:"6px 8px",fontSize:11.5}} onClick={()=>borrarItem(i)}>✕</button>}
+                {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:13}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
+                {i.estado==="pendiente"&&<button className="bg" style={{padding:"6px 8px",fontSize:13}} onClick={()=>borrarItem(i)}>✕</button>}
               </div>
             ))}
             {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(total)}</div>}
@@ -277,11 +277,11 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
             <input className="field" placeholder="Aclaración opcional: sin sal, para llevar…" value={acl} onChange={e=>setAcl(e.target.value)} style={{marginBottom:14}}/>
             {cats.map(cat=>(
               <div key={cat} style={{marginBottom:14}}>
-                <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+                <div style={{fontSize:13,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
                   {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
                     <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>agregarItem(m)}>
-                      {m.nombre}<div style={{fontWeight:600,fontSize:11.5,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                      {m.nombre}<div style={{fontWeight:600,fontSize:13,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
                     </button>
                   ))}
                 </div>
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button> 
-                 </div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>          
+              </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -316,9 +316,9 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
           const tr=cobrosHoy.filter(p=>p.metodo_pago==="transferencia").reduce((s,p)=>s+Number(p.total),0);
           return(
             <div className="card" style={{padding:16,marginBottom:16,background:"var(--primary-tint)",border:"none"}}>
-              <div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
+              <div style={{fontSize:13,fontWeight:800,color:"var(--primary-dark)",marginBottom:6}}>COBRADO HOY ({cobrosHoy.length} mesa{cobrosHoy.length!==1?"s":""})</div>
               <div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)",marginBottom:8}}>{money(ef+tar+tr)}</div>
-              <div style={{fontSize:12.5,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
+              <div style={{fontSize:14,color:"var(--primary-dark)",display:"flex",gap:14,flexWrap:"wrap"}}>
                 <span>💵 Efectivo: {money(ef)}</span>
                 <span>💳 Tarjeta: {money(tar)}</span>
                 <span>🏦 Transf.: {money(tr)}</span>
@@ -329,18 +329,18 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
                   const abierto=cobroAbierto===p.id;
                   return(
                     <div key={p.id} style={{padding:"4px 0"}}>
-                      <div onClick={()=>setCobroAbierto(abierto?null:p.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12.5,padding:"4px 0",color:"var(--primary-dark)",cursor:"pointer"}}>
+                      <div onClick={()=>setCobroAbierto(abierto?null:p.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:14,padding:"4px 0",color:"var(--primary-dark)",cursor:"pointer"}}>
                         <span>{abierto?"▾":"▸"} Mesa {p.mesa_numero} · {p.metodo_pago==="efectivo"?"💵":p.metodo_pago==="tarjeta"?"💳":"🏦"} {hora(p.cerrado_at)}</span>
                         <span style={{fontWeight:700}}>{money(p.total)}</span>
                       </div>
                       {abierto&&<div style={{background:"rgba(255,255,255,0.5)",borderRadius:8,padding:"6px 10px",marginBottom:6}}>
                         {itemsP.map(i=>(
-                          <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0",color:"var(--ink)"}}>
+                          <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:13.5,padding:"3px 0",color:"var(--ink)"}}>
                             <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</span>
                             <span>{money(i.precio)}</span>
                           </div>
                         ))}
-                        {!itemsP.length&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Sin detalle de items.</div>}
+                        {!itemsP.length&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>Sin detalle de items.</div>}
                       </div>}
                     </div>
                   );
@@ -385,10 +385,10 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
                 <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:"1px solid var(--line)"}}>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
-                    {i.aclaracion&&<div style={{fontSize:12,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
-                    <div style={{fontSize:11,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                    {i.aclaracion&&<div style={{fontSize:13.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
+                    <div style={{fontSize:12.5,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
                   </div>
-                  {i.estado==="pendiente"?<button className="bp" style={{fontSize:12,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
+                  {i.estado==="pendiente"?<button className="bp" style={{fontSize:13.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
                 </div>
               ))}
             </div>
@@ -436,7 +436,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 14px",borderRadius:10,border:"none",background:tab===n.id?"var(--primary)":"transparent",color:tab===n.id?"white":"var(--ink-soft)",fontSize:14,fontWeight:700,textAlign:"left",position:"relative"}}>
               {n.icon} {n.label}
-              {n.id==="stock"&&stockBajo.length>0&&<span style={{marginLeft:"auto",background:"var(--warn)",color:"white",borderRadius:"999px",fontSize:11,padding:"1px 7px",fontWeight:800}}>{stockBajo.length}</span>}
+              {n.id==="stock"&&stockBajo.length>0&&<span style={{marginLeft:"auto",background:"var(--warn)",color:"white",borderRadius:"999px",fontSize:12.5,padding:"1px 7px",fontWeight:800}}>{stockBajo.length}</span>}
             </button>
           ))}
         </nav>
@@ -447,9 +447,9 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
       </aside>
       <main style={{flex:1,padding:"26px 32px",maxWidth:1000}}>
         <div className="card" style={{padding:"16px 20px",marginBottom:22,background:"var(--primary-tint)",border:"none",display:"flex",flexWrap:"wrap",gap:24}}>
-          <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>VENTA DE HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{money(totalHoy)}</div></div>
-          <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
-          {stockBajo.length>0&&<div><div style={{fontSize:11.5,fontWeight:800,color:"var(--warn)"}}>⚠ STOCK BAJO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--warn)"}}>{stockBajo.length} insumo{stockBajo.length!==1?"s":""}</div></div>}
+          <div><div style={{fontSize:13,fontWeight:800,color:"var(--primary-dark)"}}>VENTA DE HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{money(totalHoy)}</div></div>
+          <div><div style={{fontSize:13,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
+          {stockBajo.length>0&&<div><div style={{fontSize:13,fontWeight:800,color:"var(--warn)"}}>⚠ STOCK BAJO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--warn)"}}>{stockBajo.length} insumo{stockBajo.length!==1?"s":""}</div></div>}
           <div style={{marginLeft:"auto",alignSelf:"center"}}><button className="bp" onClick={generarResumen} disabled={resumenLoading}>{resumenLoading?"Generando…":"✨ Resumen del día"}</button></div>
         </div>
         {resumen&&<div className="card" style={{padding:18,marginBottom:22,lineHeight:1.6,fontSize:14.5}}>{resumen}</div>}
@@ -469,7 +469,7 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
   return(
     <div>
       <div style={{display:"flex",gap:8,marginBottom:18,alignItems:"flex-end"}}>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Agregar mesas</label><input className="field" type="number" style={{width:100}} value={cant} onChange={e=>setCant(e.target.value)} placeholder="cant."/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Agregar mesas</label><input className="field" type="number" style={{width:100}} value={cant} onChange={e=>setCant(e.target.value)} placeholder="cant."/></div>
         <button className="bp" onClick={crear}>Agregar</button>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
@@ -477,7 +477,7 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
           <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
             <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
             <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
-            {m.estado==="ocupada"&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
+            {m.estado==="ocupada"&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
           </div>
         );})}
         {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste mesas.</div>}
@@ -498,29 +498,29 @@ function PanelEmpleados({userId,empleados,reload}){
   const guardarEdicion=async()=>{await sb.from("empleados").update(editForm).eq("id",editId);setEditId(null);reload();};
   return(
     <div>
-      <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
+     <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})}/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" style={{width:100}} value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\D/g,"")})} placeholder="1234"/></div>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})}/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" style={{width:100}} value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\D/g,"")})} placeholder="1234"/></div>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       <div className="card" style={{overflow:"hidden"}}>
         {empleados.map((e,i)=>editId===e.id?(
           <div key={e.id} style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:i?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
-            <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={ev=>setEditForm({...editForm,nombre:ev.target.value})}/></div>
-            <div><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={editForm.rol} onChange={ev=>setEditForm({...editForm,rol:ev.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
-            <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" value={editForm.pin} onChange={ev=>setEditForm({...editForm,pin:ev.target.value.replace(/\D/g,"")})}/></div>
+            <div style={{flex:"1 1 140px"}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={ev=>setEditForm({...editForm,nombre:ev.target.value})}/></div>
+            <div><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={editForm.rol} onChange={ev=>setEditForm({...editForm,rol:ev.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+            <div style={{width:100}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" value={editForm.pin} onChange={ev=>setEditForm({...editForm,pin:ev.target.value.replace(/\D/g,"")})}/></div>
             <button className="bp" onClick={guardarEdicion}>Guardar</button>
             <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
           </div>
         ):(
           <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
-            <div style={{flex:1}}><div style={{fontWeight:700}}>{e.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":"Cocina"} · PIN {e.pin}</div></div>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>{e.nombre}</div><div style={{fontSize:13,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":"Cocina"} · PIN {e.pin}</div></div>
             <span className="tag" style={{background:e.activo?"var(--accent-tint)":"var(--surface-2)",color:e.activo?"var(--accent)":"var(--ink-soft)"}}>{e.activo?"Activo":"Inactivo"}</span>
-            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(e)}>✏️ Editar</button>
-            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(e)}>{e.activo?"Desactivar":"Activar"}</button>
-            <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(e.id)}>🗑</button>
+            <button className="bg" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>abrirEdicion(e)}>✏️ Editar</button>
+            <button className="bg" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>toggle(e)}>{e.activo?"Desactivar":"Activar"}</button>
+            <button className="bg" style={{fontSize:13,padding:"5px 8px"}} onClick={()=>del(e.id)}>🗑</button>
           </div>
         ))}
         {!empleados.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste empleados.</div>}
@@ -542,27 +542,27 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
       {recetas.filter(r=>r.menu_item_id===item.id).map(r=>{const ins=insumos.find(i=>i.id===r.insumo_id);return(
         <div key={r.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderTop:"1px solid var(--line)"}}>
           <div style={{flex:1,fontSize:13.5}}>{ins?.nombre||"?"} — {r.cantidad} {ins?.unidad||""}</div>
-          <button className="bg" style={{padding:"4px 8px",fontSize:11}} onClick={()=>delRec(r.id)}>✕</button>
+          <button className="bg" style={{padding:"4px 8px",fontSize:12.5}} onClick={()=>delRec(r.id)}>✕</button>
         </div>
       );})}
       <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:1}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
+        <div style={{flex:1}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
           </select>
         </div>
-        <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" type="number" step="0.01" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value})} placeholder="ej: 200"/></div>
+        <div style={{width:100}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" type="number" step="0.01" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
-          <div style={{width:120}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
+          <div style={{width:120}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
             <select className="field" value={recFactor} onChange={e=>setRecFactor(Number(e.target.value))}>
               {opts.map(o=><option key={o.label} value={o.factor}>{o.label}</option>)}
             </select>
           </div>
-        ):<div style={{fontSize:11.5,color:"var(--ink-soft)",paddingBottom:10}}>{opts[0].label}</div>;})()}
+        ):<div style={{fontSize:13,color:"var(--ink-soft)",paddingBottom:10}}>{opts[0].label}</div>;})()}
         <button className="bp" onClick={addRec}>Agregar</button>
       </div>
-      {!insumos.length&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Primero cargá insumos en la sección "Stock".</div>}
+      {!insumos.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginTop:8}}>Primero cargá insumos en la sección "Stock".</div>}
     </div>
   );
 }
@@ -590,37 +590,37 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
     <div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo ítem del menú</button>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/></div>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/></div>
         <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:18}}>
-          <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+          <div style={{fontSize:13.5,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
           <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <React.Fragment key={m.id}>
                 {editId===m.id?(
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:i?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
-                    <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-                    <div style={{width:130}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
-                    <div style={{width:110}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value})}/></div>
+                    <div style={{flex:"1 1 140px"}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+                    <div style={{width:130}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
+                    <div style={{width:110}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value})}/></div>
                     <button className="bp" onClick={guardarEdicion}>Guardar</button>
                     <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
                   </div>
                 ):(
                 <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 16px",borderTop:i?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
-                  <div style={{flex:1}}><div style={{fontWeight:700}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
+                  <div style={{flex:1}}><div style={{fontWeight:700}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
                   <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(m.precio)}</div>
-                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
+                  <button className="bg" style={{fontSize:13,padding:"5px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                   <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)"}}>{m.activo?"Activo":"Pausado"}</span>
-                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
-                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
-                  <button className="bg" style={{fontSize:11.5,padding:"5px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
-                  <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
+                  <button className="bg" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
+                  <button className="bg" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                  <button className="bg" style={{fontSize:13,padding:"5px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
+                  <button className="bg" style={{fontSize:13,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                 </div>
                 )}
                 {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
@@ -667,24 +667,24 @@ function PanelStock({userId,insumos,compras,reload}){
         <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);}}>📥 Registrar compra</button>
       </div>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
-        <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio compra</label><input className="field" type="number" style={{width:110}} value={form.precio_compra} onChange={e=>setForm({...form,precio_compra:e.target.value})} placeholder="500"/></div>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" style={{width:110}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="botella"/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
+        <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio compra</label><input className="field" type="number" style={{width:110}} value={form.precio_compra} onChange={e=>setForm({...form,precio_compra:e.target.value})} placeholder="500"/></div>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       {openC&&<div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
         <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-          <div style={{flex:1}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
+          <div style={{flex:1}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
             <select className="field" value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
               <option value="">Elegir…</option>
               {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
             </select>
           </div>
-          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad comprada</label><input className="field" type="number" style={{width:110}} value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:e.target.value})}/></div>
-          <div><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Precio por unidad</label><input className="field" type="number" style={{width:120}} value={compra.precio_unitario} onChange={e=>setCompra({...compra,precio_unitario:e.target.value})}/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad comprada</label><input className="field" type="number" style={{width:110}} value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:e.target.value})}/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por unidad</label><input className="field" type="number" style={{width:120}} value={compra.precio_unitario} onChange={e=>setCompra({...compra,precio_unitario:e.target.value})}/></div>
           <button className="bp" style={{background:"var(--accent)"}} onClick={registrarCompra}>Registrar</button>
         </div>
       </div>}
@@ -692,34 +692,34 @@ function PanelStock({userId,insumos,compras,reload}){
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
         {bajos.map(i=><div key={i.id} style={{fontSize:13.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
       </div>}
-     <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
+      <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
       <div className="card" style={{overflow:"hidden"}}>
         {insumosFiltrados.map((i,idx)=>editId===i.id?(
           <div key={i.id} style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end",padding:"14px 16px",borderTop:idx?"1px solid var(--line)":"none",background:"var(--surface-2)"}}>
-            <div style={{flex:"1 1 140px"}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-            <div style={{width:100}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}/></div>
-            <div style={{width:90}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/></div>
-            <div style={{width:90}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/></div>
-            <div style={{width:110}}><label style={{fontSize:11,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:e.target.value})}/></div>
+            <div style={{flex:"1 1 140px"}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+            <div style={{width:100}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}/></div>
+            <div style={{width:90}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/></div>
+            <div style={{width:90}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/></div>
+            <div style={{width:110}}><label style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" type="number" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:e.target.value})}/></div>
             <button className="bp" onClick={guardarEdicion}>Guardar</button>
             <button className="bg" onClick={()=>setEditId(null)}>Cancelar</button>
           </div>
         ):(
           <div key={i.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderTop:idx?"1px solid var(--line)":"none",flexWrap:"wrap"}}>
-            <div style={{flex:1}}><div style={{fontWeight:700}}>{i.nombre}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
+            <div style={{flex:1}}><div style={{fontWeight:700}}>{i.nombre}</div><div style={{fontSize:13,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
             <div style={{textAlign:"right"}}>
               <div style={{fontWeight:800,fontSize:15,color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{i.stock_actual} {i.unidad}</div>
-              <div style={{fontSize:11,color:"var(--ink-soft)"}}>mín: {i.stock_minimo}</div>
+              <div style={{fontSize:12.5,color:"var(--ink-soft)"}}>mín: {i.stock_minimo}</div>
             </div>
             <span className="tag" style={{background:i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)"}}>{i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
-            <button className="bg" style={{fontSize:11.5,padding:"5px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
-            <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(i.id)}>🗑</button>
+            <button className="bg" style={{fontSize:13,padding:"5px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
+            <button className="bg" style={{fontSize:13,padding:"5px 8px"}} onClick={()=>del(i.id)}>🗑</button>
           </div>
         ))}
         {!insumos.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
         {insumos.length>0&&!insumosFiltrados.length&&<div style={{padding:20,color:"var(--ink-soft)",fontSize:14}}>No se encontró ningún insumo con ese nombre.</div>}
       </div>
-      <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",margin:"24px 0 12px"}}>HISTORIAL DE COMPRAS</div>
+      <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",margin:"24px 0 12px"}}>HISTORIAL DE COMPRAS</div>
       {!compras.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no registraste ninguna compra.</div>}
       <div className="card" style={{overflow:"hidden"}}>
         {compras.map((c,i)=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
@@ -728,7 +728,7 @@ function PanelStock({userId,insumos,compras,reload}){
               <div style={{fontWeight:700}}>{ins?.nombre||"Insumo eliminado"}</div>
               <div style={{fontWeight:700,color:"var(--primary-dark)",whiteSpace:"nowrap"}}>{money(c.cantidad*c.precio_unitario)}</div>
             </div>
-            <div style={{fontSize:12,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
           </div>
         );})}
       </div>
@@ -774,12 +774,12 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
   return(
     <div>
       <div className="card" style={{padding:18,marginBottom:18}}>
-        <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
+        <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
         {!pedidos.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>No hay mesas abiertas en este momento.</div>}
         {pedidos.map((p,i)=>{const itemsP=items.filter(i2=>i2.pedido_id===p.id);const tot=itemsP.reduce((s,i2)=>s+Number(i2.precio)*i2.cantidad,0);const abiertoAqui=abierto===p.id;return(
           <div key={p.id} style={{padding:"12px 0",borderTop:i?"1px solid var(--line)":"none"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-              <div style={{flex:1,cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}><div style={{fontWeight:700}}>{abiertoAqui?"▾":"▸"} Mesa {p.mesa_numero}</div><div style={{fontSize:12,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div></div>
+              <div style={{flex:1,cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}><div style={{fontWeight:700}}>{abiertoAqui?"▾":"▸"} Mesa {p.mesa_numero}</div><div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div></div>
               <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:16}}>{money(tot)}</div>
               <select className="field" style={{width:160}} value={metodo[p.id]||"efectivo"} onChange={e=>setMetodo({...metodo,[p.id]:e.target.value})}>
                 <option value="efectivo">Efectivo</option>
@@ -789,12 +789,12 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
             </div>
             {abiertoAqui&&<div style={{background:"var(--surface-2)",borderRadius:8,padding:"8px 12px",marginTop:8}}>
               {itemsP.map(i2=>(
-                <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:12.5,padding:"3px 0"}}>
+                <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:14,padding:"3px 0"}}>
                   <span>{i2.nombre}{i2.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i2.aclaracion}</span>}</span>
                   <span>{money(i2.precio)}</span>
                 </div>
               ))}
-              {!itemsP.length&&<div style={{fontSize:11.5,color:"var(--ink-soft)"}}>Sin items cargados.</div>}
+              {!itemsP.length&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>Sin items cargados.</div>}
             </div>}
           </div>
         );})}
@@ -805,23 +805,23 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
           </div>
         )}
       </div>
-      <div style={{fontSize:12,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
+      <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div style={{color:"var(--ink-soft)",fontSize:14}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div className="card" style={{overflow:"hidden"}}>
         {cierres.map((c,i)=>{const cAbierto=cierreAbierto===c.id;return(
           <div key={c.id} style={{padding:"12px 16px",borderTop:i?"1px solid var(--line)":"none"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8,cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
-              <div><div style={{fontWeight:700}}>{cAbierto?"▾":"▸"} {c.fecha}</div><div style={{fontSize:11.5,color:"var(--ink-soft)"}}>{c.cantidad_mesas} mesa{c.cantidad_mesas!==1?"s":""} atendidas</div></div>
+              <div><div style={{fontWeight:700}}>{cAbierto?"▾":"▸"} {c.fecha}</div><div style={{fontSize:13,color:"var(--ink-soft)"}}>{c.cantidad_mesas} mesa{c.cantidad_mesas!==1?"s":""} atendidas</div></div>
               <div style={{fontFamily:"'Fraunces',serif",fontSize:18,fontWeight:700,color:"var(--primary-dark)"}}>{money(c.total_general)}</div>
             </div>
-            <div style={{fontSize:12,color:"var(--ink-soft)",marginTop:4,display:"flex",gap:16,flexWrap:"wrap"}}>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginTop:4,display:"flex",gap:16,flexWrap:"wrap"}}>
               <span>💵 Efectivo: {money(c.total_efectivo)}</span>
               <span>💳 Tarjeta: {money(c.total_tarjeta)}</span>
               <span>🏦 Transf.: {money(c.total_transferencia)}</span>
             </div>
             {cAbierto&&<div style={{marginTop:10,borderTop:"1px solid var(--line)",paddingTop:10}}>
-              {!detalleCierre[c.id]&&<div style={{fontSize:12,color:"var(--ink-soft)"}}>Cargando detalle…</div>}
-              {detalleCierre[c.id]&&!detalleCierre[c.id].length&&<div style={{fontSize:12,color:"var(--ink-soft)"}}>No se encontró el detalle de mesas para este día.</div>}
+              {!detalleCierre[c.id]&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Cargando detalle…</div>}
+              {detalleCierre[c.id]&&!detalleCierre[c.id].length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>No se encontró el detalle de mesas para este día.</div>}
               {detalleCierre[c.id]&&detalleCierre[c.id].map(p=>(
                 <div key={p.id} style={{background:"var(--surface-2)",borderRadius:8,padding:"8px 12px",marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
@@ -829,7 +829,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
                     <span>{money(p.total)}</span>
                   </div>
                   {p.itemsP.map(i2=>(
-                    <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"2px 0",color:"var(--ink-soft)"}}>
+                    <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:13.5,padding:"2px 0",color:"var(--ink-soft)"}}>
                       <span>{i2.nombre}{i2.aclaracion&&<span> — {i2.aclaracion}</span>}</span>
                       <span>{money(i2.precio)}</span>
                     </div>
@@ -847,4 +847,5 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html> 
+</html>
+  
