@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                     
-</div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
+               </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -408,7 +408,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
         {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
       </main>
-    </div>
+     </div>
   );
 }
 
@@ -484,27 +484,8 @@ function opcionesUnidad(unidadBase){
   if(u.startsWith("litro")||u==="l")return[{label:"Litros",factor:1},{label:"Mililitros",factor:0.001}];
   return[{label:unidadBase||"unidad",factor:1}];
 }
-function PanelMenu({userId,menu,insumos,recetas,reload}){
-  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true});
-  const[open,setOpen]=useState(false);
-  const[selItem,setSelItem]=useState(null);
-  const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
-  const[recFactor,setRecFactor]=useState(1);
-  const[busqueda,setBusqueda]=useState("");
-  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
-  const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
-  const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
-  const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
-  const[editId,setEditId]=useState(null);
-  const[editForm,setEditForm]=useState({});
-  const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio)});};
-   const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0}).eq("id",editId);setEditId(null);reload();};
-  const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
-  const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
-  const menuFiltrado=menu.filter(m=>m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
-  const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
-  const costoItem=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
-  const RecetaEditor=({item})=>(
+function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecFactor,addRec,delRec}){
+  return(
     <div style={{padding:"14px 16px",background:"var(--surface-2)",borderTop:"1px solid var(--line)"}}>
       <div style={{fontWeight:700,color:"var(--accent)",marginBottom:10,fontSize:13.5}}>📦 Receta: {item.nombre}</div>
       {recetas.filter(r=>r.menu_item_id===item.id).map(r=>{const ins=insumos.find(i=>i.id===r.insumo_id);return(
@@ -533,6 +514,27 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       {!insumos.length&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Primero cargá insumos en la sección "Stock".</div>}
     </div>
   );
+}
+function PanelMenu({userId,menu,insumos,recetas,reload}){
+  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true});
+  const[open,setOpen]=useState(false);
+  const[selItem,setSelItem]=useState(null);
+  const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
+  const[recFactor,setRecFactor]=useState(1);
+  const[busqueda,setBusqueda]=useState("");
+  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
+  const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
+  const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
+  const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
+  const[editId,setEditId]=useState(null);
+  const[editForm,setEditForm]=useState({});
+  const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio)});};
+  const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0}).eq("id",editId);setEditId(null);reload();};
+  const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
+  const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
+  const menuFiltrado=menu.filter(m=>m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
+  const costoItem=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
   return(
     <div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo ítem del menú</button>
@@ -546,7 +548,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:18}}>
-          <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+         <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
           <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <React.Fragment key={m.id}>
@@ -570,7 +572,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <button className="bg" style={{fontSize:11.5,padding:"5px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                 </div>
                 )}
-                {selItem?.id===m.id&&<RecetaEditor item={m}/>}
+                {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
               </React.Fragment>
             );})}
           </div>
@@ -695,7 +697,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
     reload();
     alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
   };
-   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
+  const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
       <div className="card" style={{padding:18,marginBottom:18}}>
@@ -743,4 +745,4 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>     
+</html>
