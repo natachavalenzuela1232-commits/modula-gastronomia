@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
-              </div>    
-               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
+</div>  
+ <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
         </div>
@@ -378,6 +378,28 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
+  const[resumen,setResumen]=useState(null);
+  const[resumenLoading,setResumenLoading]=useState(false);
+  const generarResumen=async()=>{
+    setResumenLoading(true);setResumen(null);
+    const cierreHoy=cierres.find(c=>c.fecha===hoy());
+    const totalHoyReal=cierreHoy?cierreHoy.total_general:totalHoy;
+    const mesasAtendidasReal=cierreHoy?cierreHoy.cantidad_mesas:mesas.filter(m=>m.estado==="ocupada").length;
+    const itemsHoy=items.filter(i=>i.created_at&&i.created_at.slice(0,10)===hoy());
+    const conteo={};
+    itemsHoy.forEach(i=>{conteo[i.nombre]=(conteo[i.nombre]||0)+i.cantidad;});
+    const platoMasVendido=Object.entries(conteo).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
+    try{
+      const res=await fetch(`${SUPABASE_URL}/functions/v1/resumen-diario`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
+        body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,platoMasVendido,stockBajo:stockBajo.map(i=>i.nombre)}),
+      });
+      const data=await res.json();
+      setResumen(data.resumen||"No se pudo generar el resumen.");
+    }catch(e){setResumen("Error de conexión al generar el resumen.");}
+    finally{setResumenLoading(false);}
+  };
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
       <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
@@ -400,7 +422,9 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
           <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>VENTA DE HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{money(totalHoy)}</div></div>
           <div><div style={{fontSize:11.5,fontWeight:800,color:"var(--primary-dark)"}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--primary-dark)"}}>{mesas.filter(m=>m.estado==="ocupada").length} / {mesas.length}</div></div>
           {stockBajo.length>0&&<div><div style={{fontSize:11.5,fontWeight:800,color:"var(--warn)"}}>⚠ STOCK BAJO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:"var(--warn)"}}>{stockBajo.length} insumo{stockBajo.length!==1?"s":""}</div></div>}
+          <div style={{marginLeft:"auto",alignSelf:"center"}}><button className="bp" onClick={generarResumen} disabled={resumenLoading}>{resumenLoading?"Generando…":"✨ Resumen del día"}</button></div>
         </div>
+        {resumen&&<div className="card" style={{padding:18,marginBottom:22,lineHeight:1.6,fontSize:14.5}}>{resumen}</div>}
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
@@ -408,7 +432,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
       </main>
     </div>
-     );
+  );
 }
 
 function PanelMesas({userId,mesas,pedidos,items,reload}){
@@ -423,8 +447,8 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
         {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);return(
           <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
-            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
-            <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
+            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>         
+      <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
             {m.estado==="ocupada"&&<div style={{fontSize:12,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
           </div>
         );})}
@@ -548,7 +572,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:18}}>
           <div style={{fontSize:12,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
-           <div className="card" style={{overflow:"hidden"}}>
+          <div className="card" style={{overflow:"hidden"}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map((m,i)=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <React.Fragment key={m.id}>
                 {editId===m.id?(
@@ -623,8 +647,8 @@ function PanelStock({userId,insumos,compras,reload}){
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
       {openC&&<div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
-        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:12}}>📥 Registrar nueva compra</div>  
+         <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div style={{flex:1}}><label style={{fontSize:12,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
             <select className="field" value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
               <option value="">Elegir…</option>
