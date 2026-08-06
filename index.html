@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
-              </div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button> 
+                </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -497,8 +497,8 @@ function PanelEmpleados({userId,empleados,reload}){
   const abrirEdicion=e=>{setEditId(e.id);setEditForm({nombre:e.nombre,rol:e.rol,pin:e.pin});};
   const guardarEdicion=async()=>{await sb.from("empleados").update(editForm).eq("id",editId);setEditId(null);reload();};
   return(
-    <div>                
-<button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
+    <div>       
+     <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})}/></div>
         <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
@@ -695,7 +695,7 @@ function PanelStock({userId,insumos,compras,reload}){
         </div>
       </div>}
       {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
-        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
+         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
         {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
       </div>}
       <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
@@ -751,7 +751,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
     if(cierreAbierto===c.id){setCierreAbierto(null);return;}
     setCierreAbierto(c.id);
     if(detalleCierre[c.id])return;
-    const{data:peds}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").gte("cerrado_at",c.fecha+"T00:00:00").lte("cerrado_at",c.fecha+"T23:59:59");
+    const{data:peds}=await sb.from("pedidos").select("*").eq("cierre_id",c.id);
     if(!peds||!peds.length){setDetalleCierre(prev=>({...prev,[c.id]:[]}));return;}
     const ids=peds.map(p=>p.id);
     const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);
@@ -761,18 +761,32 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
   const pedCerradosHoy=[];
   const cerrarCaja=async()=>{
     if(!confirm("¿Cerrar la caja del día?"))return;
-    let ef=0,tar=0,tr=0,mesasCant=0;
     const ahora=new Date().toISOString();
+    const hoyStr=hoy();
+    const{data:sueltos}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").is("cierre_id",null).gte("cerrado_at",hoyStr+"T00:00:00").lte("cerrado_at",hoyStr+"T23:59:59");
+    let ef=0,tar=0,tr=0,mesasCant=0;
+    const aCerrarAhora=[];
     for(const p of pedidos){
       const met=metodo[p.id]||"efectivo";
       const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
       if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;
       mesasCant++;
-      await sb.from("pedidos").update({estado:"cerrada",total:tot,metodo_pago:met,cerrado_at:ahora}).eq("id",p.id);
+      aCerrarAhora.push({id:p.id,mesa_id:p.mesa_id,tot,met});
+    }
+    (sueltos||[]).forEach(p=>{
+      const tot=Number(p.total)||0;
+      if(p.metodo_pago==="efectivo")ef+=tot;else if(p.metodo_pago==="tarjeta")tar+=tot;else tr+=tot;
+      mesasCant++;
+    });
+    const total=ef+tar+tr;
+    const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant}).select().single();
+    for(const p of aCerrarAhora){
+      await sb.from("pedidos").update({estado:"cerrada",total:p.tot,metodo_pago:p.met,cerrado_at:ahora,cierre_id:cierreNuevo.id}).eq("id",p.id);
       await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",p.mesa_id);
     }
-    const total=ef+tar+tr;
-    await sb.from("cierres_caja").insert({user_id:userId,fecha:hoy(),total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant});
+    if(sueltos&&sueltos.length){
+      await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
+    }
     reload();
     alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
   };
