@@ -1,4 +1,4 @@
-      <!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,7 +297,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>             
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                  
 </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
@@ -692,9 +692,9 @@ function PanelStock({userId,insumos,compras,reload}){
       </div>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" list="unidades-sugeridas" style={{width:120}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="unidad, kg, litro…"/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>en {form.unidad||"unidades"}, contadas de a 1</div></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" list="unidades-sugeridas" style={{width:120}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})} placeholder="unidad, kg, litro…"/><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:150}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, poné "unidad" (el huevo), no "bandeja".</div></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock inicial</label><input className="field" type="number" style={{width:90}} value={form.stock_actual} onChange={e=>setForm({...form,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA, en {form.unidad||"unidades"}, contadas de a 1</div></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:110}}>Cuando baje de este número, la app avisa "stock bajo".</div></div>
         <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {form.unidad||"unidad"}</label><input className="field" inputMode="decimal" style={{width:120}} value={form.precio_compra} onChange={e=>setForm({...form,precio_compra:num(e.target.value)})} placeholder="416.67"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
@@ -726,9 +726,9 @@ function PanelStock({userId,insumos,compras,reload}){
         {insumosFiltrados.map(i=>editId===i.id?(
           <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" list="unidades-sugeridas" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><input className="field" list="unidades-sugeridas" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, poné "unidad" (el huevo), no "bandeja".</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad.</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {editForm.unidad||"unidad"}</label><input className="field" inputMode="decimal" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:num(e.target.value)})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
             <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
           </div>
@@ -761,6 +761,24 @@ function PanelStock({userId,insumos,compras,reload}){
           </div>
         );})}
       </div>
+      {compras.length>0&&(()=>{
+        const porDia={};
+        compras.forEach(c=>{porDia[c.fecha]=(porDia[c.fecha]||0)+c.cantidad*c.precio_unitario;});
+        const dias=Object.entries(porDia).sort((a,b)=>b[0]<a[0]?1:-1);
+        return(
+          <div style={{marginTop:22}}>
+            <div style={{fontSize:18,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>TOTAL GASTADO POR DÍA</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
+              {dias.map(([fecha,total])=>(
+                <div key={fecha} className="card" style={{padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>{fecha}</span>
+                  <span style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(total)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -880,7 +898,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
                   {p.itemsP.map(i2=>(
                     <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:14.5,padding:"2px 0",color:"var(--ink-soft)"}}>
                       <span>{i2.nombre}{i2.aclaracion&&<span> — {i2.aclaracion}</span>}</span>
-                      <span>{money(i2.precio)}</span>
+        <span>{money(i2.precio)}</span>
                     </div>
                   ))}
                 </div>
@@ -897,3 +915,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+            
