@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -258,7 +258,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
         <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           <div className="card" style={{padding:16,marginBottom:16}}>
-            <div style={{fontSize:29,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
+            <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
             {itemsMesa.map(i=>(
               <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)"}}>
@@ -277,7 +277,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
             <input className="field" placeholder="Aclaración opcional: sin sal, para llevar…" value={acl} onChange={e=>setAcl(e.target.value)} style={{marginBottom:14}}/>
             {cats.map(cat=>(
               <div key={cat} style={{marginBottom:14}}>
-                <div style={{fontSize:28,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+                <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
                   {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
                     <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>agregarItem(m)}>
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                  
-      </div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>             
+</div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -616,7 +616,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:22}}>
-          <div style={{fontSize:29,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
+          <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map(m=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <div key={m.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
@@ -748,7 +748,7 @@ function PanelStock({userId,insumos,compras,reload}){
         {!insumos.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
         {insumos.length>0&&!insumosFiltrados.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún insumo con ese nombre.</div>}
       </div>
-      <div style={{fontSize:29,fontWeight:800,color:"var(--ink-soft)",margin:"26px 0 12px"}}>HISTORIAL DE COMPRAS</div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",margin:"26px 0 12px"}}>HISTORIAL DE COMPRAS</div>
       {!compras.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no registraste ninguna compra.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:12}}>
         {compras.map(c=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
@@ -816,7 +816,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
-      <div style={{fontSize:29,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
       {!pedidos.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15,marginBottom:18}}>No hay mesas abiertas en este momento.</div>}
       {pedidos.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12,marginBottom:16}}>
         {pedidos.map(p=>{const itemsP=items.filter(i2=>i2.pedido_id===p.id);const tot=itemsP.reduce((s,i2)=>s+Number(i2.precio)*i2.cantidad,0);const abiertoAqui=abierto===p.id;return(
@@ -851,7 +851,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
           <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja}>💰 Cerrar caja del día</button>
         </div>
       )}
-      <div style={{fontSize:29,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
