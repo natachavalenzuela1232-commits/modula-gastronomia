@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+     <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
     return(
       <div>
         <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
-<div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -498,7 +498,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
       const data=await res.json();
-       setResumen(data.resumen||"No se pudo generar el resumen.");
+      setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -697,8 +697,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
-                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>            
-      <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
+                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                    className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
                   {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
@@ -1024,7 +1024,6 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
                 </div>
               ))}
               <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
-            </div>}
             </div>}
           </div>
         );})}
