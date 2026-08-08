@@ -134,7 +134,7 @@ function SelectorIdentidad({empleados,onElegir}){
 function App(){
   const[session,setSession]=useState(undefined);
   const[identidad,setIdentidad]=useState(null);
-  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[]});
+  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[],mensajes:[]});
   const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
@@ -144,21 +144,24 @@ function App(){
   },[]);
 
   const loadAll=async()=>{
-    const[e,m,mn,p,it,ins,rec,ci,cp]=await Promise.all([
+    const corte=new Date(Date.now()-60*24*60*60*1000).toISOString();
+    const[e,m,mn,p,it,ins,rec,ci,cp,msg]=await Promise.all([
       sb.from("empleados").select("*").order("created_at"),
       sb.from("mesas").select("*").order("numero"),
       sb.from("menu_items").select("*").order("categoria"),
       sb.from("pedidos").select("*").eq("estado","abierta"),
-      sb.from("pedido_items").select("*").order("created_at"),
+      sb.from("pedido_items").select("*").gte("created_at",corte).order("created_at"),
       sb.from("insumos").select("*").order("nombre"),
       sb.from("recetas").select("*"),
       sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(30),
-      sb.from("compras").select("*").order("created_at",{ascending:false}).limit(100),
+      sb.from("compras").select("*").gte("created_at",corte).order("created_at",{ascending:false}),
+      sb.from("mensajes_pedido").select("*").gte("created_at",corte).order("created_at"),
     ]);
     setData({
       empleados:e.data||[],mesas:m.data||[],menu:mn.data||[],
       pedidos:p.data||[],items:it.data||[],insumos:ins.data||[],
       recetas:rec.data||[],cierres:ci.data||[],compras:cp.data||[],
+      mensajes:msg.data||[],
     });
     setLoading(false);
   };
@@ -168,7 +171,7 @@ function App(){
     loadAll();
     const saved=localStorage.getItem("modula_id");
     if(saved)try{setIdentidad(JSON.parse(saved));}catch{}
-    const canal=sb.channel("rt").on("postgres_changes",{event:"*",schema:"public",table:"pedido_items"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mesas"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"insumos"},()=>loadAll()).subscribe();
+    const canal=sb.channel("rt").on("postgres_changes",{event:"*",schema:"public",table:"pedido_items"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mesas"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"insumos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mensajes_pedido"},()=>loadAll()).subscribe();
     return()=>sb.removeChannel(canal);
   },[session]);
 
@@ -202,7 +205,37 @@ function TopBar({titulo,identidad,cambiar,logout}){
 }
 
 // ---- VISTA MOZO ----
-function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,logout}){
+function ChatHilo({itemId,mensajes,autor,userId}){
+  const[abierto,setAbierto]=useState(false);
+  const[texto,setTexto]=useState("");
+  const msgs=mensajes.filter(m=>m.pedido_item_id===itemId);
+  const enviar=async()=>{
+    if(!texto.trim())return;
+    const t=texto.trim();setTexto("");
+    await sb.from("mensajes_pedido").insert({user_id:userId,pedido_item_id:itemId,autor,texto:t});
+  };
+  return(
+    <div style={{marginTop:6}}>
+      <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>setAbierto(!abierto)}>💬 {msgs.length?`Chat (${msgs.length})`:"Chat"}</button>
+      {abierto&&<div style={{background:"var(--surface-2)",borderRadius:8,padding:10,marginTop:6}}>
+        {!msgs.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Sin mensajes todavía.</div>}
+        {msgs.map(m=>(
+          <div key={m.id} style={{display:"flex",justifyContent:m.autor===autor?"flex-end":"flex-start",marginBottom:6}}>
+            <div style={{maxWidth:"85%",background:m.autor===autor?"var(--primary)":"var(--surface)",color:m.autor===autor?"#fff":"var(--ink)",borderRadius:10,padding:"6px 10px",fontSize:14}}>
+              <div style={{fontSize:11.5,opacity:.75,marginBottom:2}}>{m.autor==="mozo"?"Mozo":"Cocina"} · {hora(m.created_at)}</div>
+              {m.texto}
+            </div>
+          </div>
+        ))}
+        <div style={{display:"flex",gap:6,marginTop:8}}>
+          <input className="field" placeholder="Escribí un mensaje…" value={texto} onChange={e=>setTexto(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")enviar();}}/>
+          <button className="bp" style={{padding:"8px 12px",fontSize:14}} onClick={enviar}>Enviar</button>
+        </div>
+      </div>}
+    </div>
+  );
+}
+function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,cambiar,logout}){
   const[mesaId,setMesaId]=useState(()=>localStorage.getItem("modula_mesa")||null);
   const[acl,setAcl]=useState("");
   const[pidiendoPago,setPidiendoPago]=useState(false);
@@ -236,12 +269,22 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
     }
     setMesaId(m.id);
   };
+  const[ultimoAgregado,setUltimoAgregado]=useState(null);
   const agregarItem=async mi=>{
     if(!pedSel)return;
-    await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"});
+    const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedSel.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
     setAcl("");reload();
+    if(nuevo){
+      setUltimoAgregado(nuevo);
+      setTimeout(()=>setUltimoAgregado(u=>u?.id===nuevo.id?null:u),5000);
+    }
   };
-  const borrarItem=async i=>{if(i.estado==="pendiente"){await sb.from("pedido_items").delete().eq("id",i.id);reload();}};
+  const deshacerUltimo=async()=>{
+    if(!ultimoAgregado)return;
+    await sb.from("pedido_items").delete().eq("id",ultimoAgregado.id);
+    setUltimoAgregado(null);reload();
+  };
+  const borrarItem=async i=>{if(!confirm(`¿Borrar "${i.nombre}" del pedido?`))return;await sb.from("pedido_items").delete().eq("id",i.id);reload();};
   const marcarEntregado=async i=>{await sb.from("pedido_items").update({estado:"entregado"}).eq("id",i.id);reload();};
   const cerrarMesa=async metodo=>{
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
@@ -254,21 +297,28 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     return(
       <div>
-        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
-        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>      
+     <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
+          {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
+            <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
+            <button className="bg" style={{padding:"6px 12px",fontSize:14}} onClick={deshacerUltimo}>Deshacer</button>
+          </div>}
           <div className="card" style={{padding:16,marginBottom:16}}>
             <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
             {itemsMesa.map(i=>(
-              <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderTop:"1px solid var(--line)"}}>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
-                  <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
+              <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
+                    <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{money(i.precio)} · {hora(i.created_at)}</div>
+                  </div>
+                  <span className="tag" style={{background:i.estado==="pendiente"?"var(--warn-tint)":i.estado==="listo"?"var(--accent-tint)":"var(--surface-2)",color:i.estado==="pendiente"?"var(--warn)":i.estado==="listo"?"var(--accent)":"var(--ink-soft)"}}>{i.estado==="pendiente"?"En cocina":i.estado==="listo"?"¡Listo!":"Entregado"}</span>
+                  {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:14}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
+                  <button className="bg" style={{padding:"6px 8px",fontSize:14}} onClick={()=>borrarItem(i)}>✕</button>
                 </div>
-                <span className="tag" style={{background:i.estado==="pendiente"?"var(--warn-tint)":i.estado==="listo"?"var(--accent-tint)":"var(--surface-2)",color:i.estado==="pendiente"?"var(--warn)":i.estado==="listo"?"var(--accent)":"var(--ink-soft)"}}>{i.estado==="pendiente"?"En cocina":i.estado==="listo"?"¡Listo!":"Entregado"}</span>
-                {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:14}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
-                {i.estado==="pendiente"&&<button className="bg" style={{padding:"6px 8px",fontSize:14}} onClick={()=>borrarItem(i)}>✕</button>}
+                <ChatHilo itemId={i.id} mensajes={mensajes} autor="mozo" userId={userId}/>
               </div>
             ))}
             {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(total)}</div>}
@@ -297,8 +347,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("efectivo")}>💵 Efectivo</button>
                 <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("tarjeta")}>💳 Tarjeta</button>
-                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>                  
-</div>
+                <button className="bp" style={{flex:"1 1 100px"}} onClick={()=>cerrarMesa("transferencia")}>🏦 Transf.</button>
+              </div>
               <button className="bg" style={{width:"100%",marginTop:10}} onClick={()=>setPidiendoPago(false)}>Cancelar</button>
             </div>
           )}
@@ -368,7 +418,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,reload,cambiar,log
 }
 
 // ---- VISTA COCINA ----
-function VistaCocina({identidad,items,cambiar,logout,reload}){
+function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
   const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
@@ -382,13 +432,16 @@ function VistaCocina({identidad,items,cambiar,logout,reload}){
             <div key={mesa} className="card" style={{padding:16}}>
               <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",marginBottom:10}}>Mesa {mesa}</div>
               {its.map(i=>(
-                <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:"1px solid var(--line)"}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
-                    {i.aclaracion&&<div style={{fontSize:14.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
-                    <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                <div key={i.id} style={{padding:"10px 0",borderTop:"1px solid var(--line)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
+                      {i.aclaracion&&<div style={{fontSize:14.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
+                      <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                    </div>
+                    {i.estado==="pendiente"?<button className="bp" style={{fontSize:14.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
                   </div>
-                  {i.estado==="pendiente"?<button className="bp" style={{fontSize:14.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
+                  <ChatHilo itemId={i.id} mensajes={mensajes} autor="cocina" userId={userId}/>
                 </div>
               ))}
             </div>
@@ -444,8 +497,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   };
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
-      <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
-        <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",padding:"0 8px 14px",borderBottom:"1px solid var(--line)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastro</span></div>
+      <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}> 
+          <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",padding:"0 8px 14px",borderBottom:"1px solid var(--line)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastro</span></div>
         <nav style={{display:"flex",flexDirection:"column",gap:4}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 14px",borderRadius:10,border:"none",background:tab===n.id?"var(--primary)":"transparent",color:tab===n.id?"white":"var(--ink-soft)",fontSize:15,fontWeight:700,textAlign:"left",position:"relative"}}>
@@ -845,7 +898,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
                 <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:18,color:"var(--primary-dark)"}}>{money(tot)}</div>
               </div>
               <div style={{fontSize:14,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div>
-            </div>
+                </div>
             <select className="field" value={metodo[p.id]||"efectivo"} onChange={e=>setMetodo({...metodo,[p.id]:e.target.value})}>
               <option value="efectivo">Efectivo</option>
               <option value="tarjeta">Tarjeta</option>
@@ -898,7 +951,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
                   {p.itemsP.map(i2=>(
                     <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:14.5,padding:"2px 0",color:"var(--ink-soft)"}}>
                       <span>{i2.nombre}{i2.aclaracion&&<span> — {i2.aclaracion}</span>}</span>
-        <span>{money(i2.precio)}</span>
+                      <span>{money(i2.precio)}</span>
                     </div>
                   ))}
                 </div>
@@ -915,4 +968,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
-            
