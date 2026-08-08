@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -153,7 +153,7 @@ function App(){
       sb.from("pedido_items").select("*").gte("created_at",corte).order("created_at"),
       sb.from("insumos").select("*").order("nombre"),
       sb.from("recetas").select("*"),
-      sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(30),
+      sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(400),
       sb.from("compras").select("*").gte("created_at",corte).order("created_at",{ascending:false}),
       sb.from("mensajes_pedido").select("*").gte("created_at",corte).order("created_at"),
     ]);
@@ -205,14 +205,15 @@ function TopBar({titulo,identidad,cambiar,logout}){
 }
 
 // ---- VISTA MOZO ----
-function ChatHilo({itemId,mensajes,autor,userId}){
+function ChatHilo({itemId,mensajes,autor,userId,reload}){
   const[abierto,setAbierto]=useState(false);
   const[texto,setTexto]=useState("");
   const msgs=mensajes.filter(m=>m.pedido_item_id===itemId);
   const enviar=async()=>{
     if(!texto.trim())return;
     const t=texto.trim();setTexto("");
-    await sb.from("mensajes_pedido").insert({user_id:userId,pedido_item_id:itemId,autor,texto:t});
+    await sb.from("mensajes_pedido").insert({pedido_item_id:itemId,autor,texto:t});
+    reload();
   };
   return(
     <div style={{marginTop:6}}>
@@ -296,9 +297,9 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
   if(mesaSel){
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     return(
-      <div>
-        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>      
-     <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+      <div>     
+     <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
+        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -318,7 +319,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
                   {i.estado==="listo"&&<button className="bp" style={{padding:"6px 10px",fontSize:14}} onClick={()=>marcarEntregado(i)}>Entregar</button>}
                   <button className="bg" style={{padding:"6px 8px",fontSize:14}} onClick={()=>borrarItem(i)}>✕</button>
                 </div>
-                <ChatHilo itemId={i.id} mensajes={mensajes} autor="mozo" userId={userId}/>
+                <ChatHilo itemId={i.id} mensajes={mensajes} autor="mozo" userId={userId} reload={reload}/>
               </div>
             ))}
             {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(total)}</div>}
@@ -402,12 +403,19 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:12}}>
           {misMesas.map(m=>{
             const pedM=pedidos.find(p=>p.mesa_id===m.id);
-            const tieneListo=pedM?items.some(i=>i.pedido_id===pedM.id&&i.estado==="listo"):false;
+            const itemsM=pedM?items.filter(i=>i.pedido_id===pedM.id):[];
+            const tieneListo=itemsM.some(i=>i.estado==="listo");
+            const itemIdsM=itemsM.map(i=>i.id);
+            const tieneMensajeNuevo=mensajes.some(msg=>{
+              if(msg.autor!=="cocina"||!itemIdsM.includes(msg.pedido_item_id))return false;
+              return!mensajes.some(m2=>m2.pedido_item_id===msg.pedido_item_id&&m2.autor==="mozo"&&new Date(m2.created_at)>new Date(msg.created_at));
+            });
             return(
-            <button key={m.id} className="mesabtn" style={{borderColor:tieneListo?"var(--accent)":m.estado==="ocupada"?"var(--primary)":"var(--line)",background:tieneListo?"var(--accent-tint)":m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
+            <button key={m.id} className="mesabtn" style={{borderColor:tieneListo||tieneMensajeNuevo?"var(--accent)":m.estado==="ocupada"?"var(--primary)":"var(--line)",background:tieneListo||tieneMensajeNuevo?"var(--accent-tint)":m.estado==="ocupada"?"var(--primary-tint)":"var(--surface)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--ink)"}} onClick={()=>abrirMesa(m)}>
               Mesa {m.numero}
               <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
               {tieneListo&&<span className="tag" style={{background:"var(--accent)",color:"white"}}>🔔 Listo para retirar</span>}
+              {tieneMensajeNuevo&&<span className="tag" style={{background:"var(--warn)",color:"white"}}>💬 Mensaje nuevo</span>}
             </button>
           );})}
         </div>
@@ -441,7 +449,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
                     </div>
                     {i.estado==="pendiente"?<button className="bp" style={{fontSize:14.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
                   </div>
-                  <ChatHilo itemId={i.id} mensajes={mensajes} autor="cocina" userId={userId}/>
+                  <ChatHilo itemId={i.id} mensajes={mensajes} autor="cocina" userId={userId} reload={reload}/>
                 </div>
               ))}
             </div>
@@ -489,16 +497,16 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
-      });
-      const data=await res.json();
+      });    
+        const data=await res.json();
       setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
-      <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}> 
-          <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",padding:"0 8px 14px",borderBottom:"1px solid var(--line)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastro</span></div>
+      <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
+        <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",padding:"0 8px 14px",borderBottom:"1px solid var(--line)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastro</span></div>
         <nav style={{display:"flex",flexDirection:"column",gap:4}}>
           {NAV.map(n=>(
             <button key={n.id} onClick={()=>setTab(n.id)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",padding:"11px 14px",borderRadius:10,border:"none",background:tab===n.id?"var(--primary)":"transparent",color:tab===n.id?"white":"var(--ink-soft)",fontSize:15,fontWeight:700,textAlign:"left",position:"relative"}}>
@@ -524,7 +532,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
         {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
-        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} reload={reload}/>}
+        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} reload={reload}/>}
       </main>
     </div>
   );
@@ -690,7 +698,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
-                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                  <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
@@ -836,11 +844,41 @@ function PanelStock({userId,insumos,compras,reload}){
   );
 }
 
-function PanelCaja({userId,pedidos,items,cierres,reload}){
+function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
   const[metodo,setMetodo]=useState({});
   const[abierto,setAbierto]=useState(null);
   const[cierreAbierto,setCierreAbierto]=useState(null);
   const[detalleCierre,setDetalleCierre]=useState({});
+  const costoItemVD=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  const meses=[...new Set(cierres.map(c=>c.fecha.slice(0,7)))].sort((a,b)=>b<a?-1:1);
+  const[mesSel,setMesSel]=useState(meses[0]||"");
+  const[resumenMes,setResumenMes]=useState(null);
+  const[cargandoMes,setCargandoMes]=useState(false);
+  const cargarResumenMes=async(mes)=>{
+    setMesSel(mes);setResumenMes(null);
+    const cierresMes=cierres.filter(c=>c.fecha.slice(0,7)===mes);
+    if(!cierresMes.length){setResumenMes({totalVendido:0,ef:0,tar:0,tr:0,mesas:0,costoTotal:0,margen:0,dias:0});return;}
+    setCargandoMes(true);
+    const totalVendido=cierresMes.reduce((s,c)=>s+Number(c.total_general),0);
+    const ef=cierresMes.reduce((s,c)=>s+Number(c.total_efectivo),0);
+    const tar=cierresMes.reduce((s,c)=>s+Number(c.total_tarjeta),0);
+    const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
+    const mesasCant=cierresMes.reduce((s,c)=>s+Number(c.cantidad_mesas),0);
+    const cierreIds=cierresMes.map(c=>c.id);
+    const{data:peds}=await sb.from("pedidos").select("*").in("cierre_id",cierreIds);
+    let costoTotal=0;
+    if(peds&&peds.length){
+      const pedIds=peds.map(p=>p.id);
+      const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",pedIds);
+      (its||[]).forEach(i=>{
+        const mi=menu.find(m=>m.id===i.menu_item_id);
+        if(mi)costoTotal+=costoItemVD(mi)*i.cantidad;
+      });
+    }
+    setResumenMes({totalVendido,ef,tar,tr,mesas:mesasCant,costoTotal:Math.round(costoTotal),margen:Math.round(totalVendido-costoTotal),dias:cierresMes.length});
+    setCargandoMes(false);
+  };
+  useEffect(()=>{if(meses.length&&!resumenMes)cargarResumenMes(meses[0]);},[cierres.length]);
   const verDetalleCierre=async(c)=>{
     if(cierreAbierto===c.id){setCierreAbierto(null);return;}
     setCierreAbierto(c.id);
@@ -859,8 +897,8 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
     const hoyStr=hoy();
     const{data:sueltos}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").is("cierre_id",null).gte("cerrado_at",hoyStr+"T00:00:00").lte("cerrado_at",hoyStr+"T23:59:59");
     let ef=0,tar=0,tr=0,mesasCant=0;
-    const aCerrarAhora=[];
-    for(const p of pedidos){
+    const aCerrarAhora=[];  
+      for(const p of pedidos){
       const met=metodo[p.id]||"efectivo";
       const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
       if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;
@@ -887,6 +925,29 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
+      {meses.length>0&&<div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:12}}>
+          <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>RESUMEN MENSUAL</div>
+          <select className="field" style={{width:170}} value={mesSel} onChange={e=>cargarResumenMes(e.target.value)}>
+            {meses.map(m=>{const[y,mm]=m.split("-");const nombres=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];return<option key={m} value={m}>{nombres[Number(mm)-1]} {y}</option>;})}
+          </select>
+        </div>
+        {cargandoMes&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Calculando…</div>}
+        {resumenMes&&!cargandoMes&&(
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:16}}>
+            <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENDIDO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary-dark)"}}>{money(resumenMes.totalVendido)}</div></div>
+            <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>COSTO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(resumenMes.costoTotal)}</div></div>
+            <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--accent)"}}>{money(resumenMes.margen)}</div></div>
+            <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>MESAS ATENDIDAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{resumenMes.mesas}</div></div>
+            <div style={{gridColumn:"1/-1",fontSize:14,color:"var(--ink-soft)",display:"flex",gap:16,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
+              <span>💵 Efectivo: {money(resumenMes.ef)}</span>
+              <span>💳 Tarjeta: {money(resumenMes.tar)}</span>
+              <span>🏦 Transf.: {money(resumenMes.tr)}</span>
+              <span>· {resumenMes.dias} día{resumenMes.dias!==1?"s":""} con cierre de caja</span>
+            </div>
+          </div>
+        )}
+      </div>}
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>MESAS ABIERTAS AHORA</div>
       {!pedidos.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15,marginBottom:18}}>No hay mesas abiertas en este momento.</div>}
       {pedidos.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12,marginBottom:16}}>
@@ -898,7 +959,7 @@ function PanelCaja({userId,pedidos,items,cierres,reload}){
                 <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:18,color:"var(--primary-dark)"}}>{money(tot)}</div>
               </div>
               <div style={{fontSize:14,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div>
-                </div>
+            </div>
             <select className="field" value={metodo[p.id]||"efectivo"} onChange={e=>setMetodo({...metodo,[p.id]:e.target.value})}>
               <option value="efectivo">Efectivo</option>
               <option value="tarjeta">Tarjeta</option>
