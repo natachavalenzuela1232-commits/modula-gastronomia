@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     return(
       <div>
-        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>  
-      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
+<div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -497,7 +497,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
-      const data=await res.json();  
+      const data=await res.json();
        setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
@@ -697,8 +697,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
-                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
-                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
+                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>            
+      <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
                   {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
@@ -890,36 +890,43 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
     setDetalleCierre(prev=>({...prev,[c.id]:conItems}));
   };
   const pedCerradosHoy=[];
+  const[cerrandoCaja,setCerrandoCaja]=useState(false);
   const cerrarCaja=async()=>{
+    if(cerrandoCaja)return;
     if(!confirm("¿Cerrar la caja del día?"))return;
-    const ahora=new Date().toISOString();
-    const hoyStr=hoy();
-    const{data:sueltos}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").is("cierre_id",null).gte("cerrado_at",hoyStr+"T00:00:00").lte("cerrado_at",hoyStr+"T23:59:59");
-    let ef=0,tar=0,tr=0,mesasCant=0;
-    const aCerrarAhora=[];
-    for(const p of pedidos){
-       const met=metodo[p.id]||"efectivo";
-      const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
-      if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;
-      mesasCant++;
-      aCerrarAhora.push({id:p.id,mesa_id:p.mesa_id,tot,met});
+    setCerrandoCaja(true);
+    try{
+      const ahora=new Date().toISOString();
+      const hoyStr=hoy();
+      const{data:sueltos}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").is("cierre_id",null).gte("cerrado_at",hoyStr+"T00:00:00").lte("cerrado_at",hoyStr+"T23:59:59");
+      let ef=0,tar=0,tr=0,mesasCant=0;
+      const aCerrarAhora=[];
+      for(const p of pedidos){
+        const met=metodo[p.id]||"efectivo";
+        const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+        if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;
+        mesasCant++;
+        aCerrarAhora.push({id:p.id,mesa_id:p.mesa_id,tot,met});
+      }
+      (sueltos||[]).forEach(p=>{
+        const tot=Number(p.total)||0;
+        if(p.metodo_pago==="efectivo")ef+=tot;else if(p.metodo_pago==="tarjeta")tar+=tot;else tr+=tot;
+        mesasCant++;
+      });
+      const total=ef+tar+tr;
+      const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant}).select().single();
+      for(const p of aCerrarAhora){
+        await sb.from("pedidos").update({estado:"cerrada",total:p.tot,metodo_pago:p.met,cerrado_at:ahora,cierre_id:cierreNuevo.id}).eq("id",p.id);
+        await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",p.mesa_id);
+      }
+      if(sueltos&&sueltos.length){
+        await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
+      }
+      reload();
+      alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
+    }finally{
+      setCerrandoCaja(false);
     }
-    (sueltos||[]).forEach(p=>{
-      const tot=Number(p.total)||0;
-      if(p.metodo_pago==="efectivo")ef+=tot;else if(p.metodo_pago==="tarjeta")tar+=tot;else tr+=tot;
-      mesasCant++;
-    });
-    const total=ef+tar+tr;
-    const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant}).select().single();
-    for(const p of aCerrarAhora){
-      await sb.from("pedidos").update({estado:"cerrada",total:p.tot,metodo_pago:p.met,cerrado_at:ahora,cierre_id:cierreNuevo.id}).eq("id",p.id);
-      await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",p.mesa_id);
-    }
-    if(sueltos&&sueltos.length){
-      await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
-    }
-    reload();
-    alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
   };
   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
@@ -979,7 +986,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
       {pedidos.length>0&&(
         <div className="card" style={{padding:18,marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
           <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"var(--primary-dark)"}}>Total acumulado: {money(totalGeneral)}</div>
-          <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja}>💰 Cerrar caja del día</button>
+          <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja} disabled={cerrandoCaja}>{cerrandoCaja?"Cerrando…":"💰 Cerrar caja del día"}</button>
         </div>
       )}
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
@@ -1016,6 +1023,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
                   ))}
                 </div>
               ))}
+              <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
+            </div>}
             </div>}
           </div>
         );})}
