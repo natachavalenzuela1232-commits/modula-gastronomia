@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
     return(
       <div>
-        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>   
-      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
+         <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -498,7 +498,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
       const data=await res.json();
-        setResumen(data.resumen||"No se pudo generar el resumen.");
+       setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -673,6 +673,9 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
         <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>💡 Acá cargás lo que vendés. En cada plato o bebida, tocá <b>📦 Receta</b> y cargá exactamente qué insumos y qué cantidad de cada uno lleva — con eso, la app calcula sola el costo y la ganancia real de cada venta.</span>
+      </div>
       <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
       {cats.map(cat=>(
         <div key={cat} style={{marginBottom:22}}>
@@ -695,10 +698,10 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   </div>
                   <div style={{fontWeight:800,fontSize:19,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(m.precio)}</div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
-                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
+                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
-      <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
+                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
                   {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
@@ -778,6 +781,9 @@ function PanelStock({userId,insumos,compras,reload}){
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
         {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
       </div>}
+      <div className="card" style={{padding:"12px 16px",marginBottom:14,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>💡 Acá cargás lo que comprás para el negocio. <b>Unidad</b>: cómo lo contás de a 1 (kg, litro, unidad). <b>Stock</b>: cuánto tenés ahora. <b>Mínimo</b>: cuándo avisarte que hay que reponer. <b>Precio</b>: cuánto sale esa única unidad — con esto la app calcula el costo real de cada plato.</span>
+      </div>
       <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12}}>
         {insumosFiltrados.map(i=>editId===i.id?(
@@ -892,13 +898,13 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
     if(cerrandoCaja)return;
     if(!confirm("¿Cerrar la caja del día?"))return;
     setCerrandoCaja(true);
-    try{
+     try{
       const ahora=new Date().toISOString();
       const hoyStr=hoy();
       const{data:sueltos}=await sb.from("pedidos").select("*").eq("user_id",userId).eq("estado","cerrada").is("cierre_id",null).gte("cerrado_at",hoyStr+"T00:00:00").lte("cerrado_at",hoyStr+"T23:59:59");
       let ef=0,tar=0,tr=0,mesasCant=0;
       const aCerrarAhora=[];
-        for(const p of pedidos){
+      for(const p of pedidos){
         const met=metodo[p.id]||"efectivo";
         const tot=items.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
         if(met==="efectivo")ef+=tot;else if(met==="tarjeta")tar+=tot;else tr+=tot;
