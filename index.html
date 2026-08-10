@@ -497,8 +497,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
-      const data=await res.json();      
-        setResumen(data.resumen||"No se pudo generar el resumen.");
+      const data=await res.json();
+      setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -697,7 +697,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                     <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)",whiteSpace:"nowrap"}}>{m.activo?"Activo":"Pausado"}</span>
                   </div>
                   <div style={{fontWeight:800,fontSize:19,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(m.precio)}</div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>   
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
@@ -724,6 +724,7 @@ function PanelStock({userId,insumos,compras,reload}){
   const[open,setOpen]=useState(false);
   const[compra,setCompra]=useState({insumo_id:"",cantidad:"",precio_total:""});
   const[openC,setOpenC]=useState(false);
+  const[pasoCompra,setPasoCompra]=useState(0);
   const[busqueda,setBusqueda]=useState("");
   const insumosFiltrados=insumos.filter(i=>i.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const add=async()=>{if(!form.nombre)return;await sb.from("insumos").insert({...form,stock_actual:Number(form.stock_actual)||0,stock_minimo:Number(form.stock_minimo)||1,precio_compra:Number(form.precio_compra)||0,user_id:userId});setForm({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});setOpen(false);reload();};
@@ -751,7 +752,7 @@ function PanelStock({userId,insumos,compras,reload}){
     <div>
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
         <button className="bp" onClick={()=>{setOpen(!open);setOpenC(false);}}>➕ Nuevo insumo</button>
-        <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);}}>📥 Registrar compra</button>
+        <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);setPasoCompra(0);}}>📥 Registrar compra</button>
       </div>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
@@ -760,22 +761,57 @@ function PanelStock({userId,insumos,compras,reload}){
         <button className="bp" onClick={add}>Guardar</button>
         <div style={{flexBasis:"100%",fontSize:13.5,color:"var(--ink-soft)"}}>El insumo se crea sin stock ni precio — apenas lo guardes, usá "📥 Registrar compra" (ahí abajo) para cargar la primera compra: la app calcula el precio sola, sin que hagas ninguna cuenta.</div>
       </div>}
-      {openC&&<div className="card" style={{padding:16,marginBottom:16,borderColor:"var(--accent)"}}>
-        <div style={{fontWeight:700,color:"var(--accent)",marginBottom:4}}>📥 Registrar nueva compra</div>
-        <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:12}}>Cargá cuánto compraste y cuánto pagaste EN TOTAL — la app calcula sola el precio de cada unidad.</div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-          <div style={{flex:1}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
-            <select className="field" value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
-              <option value="">Elegir…</option>
+      {openC&&(()=>{
+        const insumoSel=insumos.find(i=>i.id===compra.insumo_id);
+        return(
+        <div className="card" style={{padding:20,marginBottom:16,borderColor:"var(--accent)"}}>
+          <div style={{fontWeight:700,color:"var(--accent)",marginBottom:4}}>📥 Registrar nueva compra</div>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:18}}>Paso {pasoCompra+1} de 3</div>
+
+          {pasoCompra===0&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué compraste?</div>
+            <select className="field" style={{fontSize:16,padding:14}} autoFocus value={compra.insumo_id} onChange={e=>setCompra({...compra,insumo_id:e.target.value})}>
+              <option value="">Elegir insumo…</option>
               {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre} ({i.unidad})</option>)}
             </select>
-          </div>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad comprada</label><input className="field" inputMode="decimal" style={{width:110}} value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:num(e.target.value)})} placeholder="ej: 12"/></div>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Total pagado ($)</label><input className="field" inputMode="decimal" style={{width:120}} value={compra.precio_total} onChange={e=>setCompra({...compra,precio_total:num(e.target.value)})} placeholder="ej: 5000"/></div>
-          <button className="bp" style={{background:"var(--accent)"}} onClick={registrarCompra} disabled={!compra.insumo_id||!cantCompra}>Registrar</button>
+            <button className="bp" style={{background:"var(--accent)",width:"100%",marginTop:16,padding:14}} disabled={!compra.insumo_id} onClick={()=>setPasoCompra(1)}>Siguiente →</button>
+          </div>}
+
+          {pasoCompra===1&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto contiene lo que compraste?</div>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>En {insumoSel?.unidad||"la unidad"} de {insumoSel?.nombre}. Ej: si es una botella de 750ml, poné 750.</div>
+            <input className="field" inputMode="decimal" style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.cantidad} onChange={e=>setCompra({...compra,cantidad:num(e.target.value)})} placeholder={`ej: 750`}/>
+            <div style={{textAlign:"center",fontSize:14.5,color:"var(--ink-soft)",marginTop:6}}>{insumoSel?.unidad}</div>
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!cantCompra} onClick={()=>setPasoCompra(2)}>Siguiente →</button>
+            </div>
+          </div>}
+
+          {pasoCompra===2&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto pagaste en total?</div>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>El precio de todo lo que compraste junto, no de una sola unidad.</div>
+            <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
+            <input className="field" inputMode="decimal" style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.precio_total} onChange={e=>setCompra({...compra,precio_total:num(e.target.value)})} placeholder="ej: 9000"/>
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(1)}>← Atrás</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!totalCompra} onClick={()=>setPasoCompra(3)}>Siguiente →</button>
+            </div>
+          </div>}
+
+          {pasoCompra===3&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
+            <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
+              <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
+              <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por cada {insumoSel?.unidad}</div>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(2)}>← Atrás</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} onClick={()=>{registrarCompra();setPasoCompra(0);}}>✅ Confirmar y guardar</button>
+            </div>
+          </div>}
         </div>
-        {cantCompra>0&&totalCompra>0&&<div style={{marginTop:10,fontSize:14.5,color:"var(--accent)",fontWeight:700}}>= {money(precioUnitCalc)} por cada {insumos.find(i=>i.id===compra.insumo_id)?.unidad||"unidad"}</div>}
-      </div>}
+        );})()}
       {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
         {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
