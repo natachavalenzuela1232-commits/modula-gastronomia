@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
     return(
       <div>
         <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
-        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -497,8 +497,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
-      const data=await res.json();
-      setResumen(data.resumen||"No se pudo generar el resumen.");
+      const data=await res.json();      
+        setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -697,8 +697,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                     <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)",whiteSpace:"nowrap"}}>{m.activo?"Activo":"Pausado"}</span>
                   </div>
                   <div style={{fontWeight:800,fontSize:19,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(m.precio)}</div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
-                  <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>   
+                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
@@ -741,9 +741,7 @@ function PanelStock({userId,insumos,compras,reload}){
   const del=async id=>{if(confirm("¿Eliminar este insumo?")){{await sb.from("insumos").delete().eq("id",id);reload();}}};
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
-  const[calcEdit,setCalcEdit]=useState({tam:"",precio:""});
-  const calcEditPrecio=Number(calcEdit.tam)>0?(Number(calcEdit.precio)||0)/Number(calcEdit.tam):0;
-  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});setCalcEdit({tam:"",precio:""});};
+  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
   const guardarEdicion=async()=>{
     await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:Number(editForm.precio_compra)||0}).eq("id",editId);
     setEditId(null);reload();
@@ -791,19 +789,8 @@ function PanelStock({userId,insumos,compras,reload}){
           <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja".</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad. Si el envase que cargaste arriba tiene {calcEdit.tam||"…"} {editForm.unidad||"unidad"}, cada envase entero suma esa cantidad — ej: 2 envases = {calcEdit.tam?Number(calcEdit.tam)*2:"…"}.</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad.</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
-            <div className="card" style={{padding:10,background:"var(--surface-2)",border:"1px dashed var(--line)"}}>
-              <div style={{fontSize:12.5,fontWeight:700,color:"var(--ink-soft)",marginBottom:6}}>🧮 ¿Te resulta más fácil por envase? Completá y calculamos el precio por {editForm.unidad||"unidad"}:</div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                <input className="field" inputMode="decimal" style={{width:100}} placeholder={`ej: 750`} value={calcEdit.tam} onChange={e=>setCalcEdit({...calcEdit,tam:num(e.target.value)})}/>
-                <span style={{fontSize:12.5,color:"var(--ink-soft)"}}>{editForm.unidad||"unidad"} por</span>
-                <input className="field" inputMode="decimal" style={{width:100}} placeholder="ej: 9000" value={calcEdit.precio} onChange={e=>setCalcEdit({...calcEdit,precio:num(e.target.value)})}/>
-                <span style={{fontSize:12.5,color:"var(--ink-soft)"}}>$ el envase</span>
-                <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} disabled={!calcEditPrecio} onClick={()=>setEditForm({...editForm,precio_compra:String(Math.round(calcEditPrecio*100)/100)})}>Usar este precio ↓</button>
-              </div>
-              {calcEditPrecio>0&&<div style={{fontSize:13.5,color:"var(--accent)",fontWeight:700,marginTop:6}}>= {money(calcEditPrecio)} por {editForm.unidad||"unidad"}</div>}
-            </div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {editForm.unidad||"unidad"}</label><input className="field" inputMode="decimal" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:num(e.target.value)})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
             <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
           </div>
