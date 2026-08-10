@@ -498,7 +498,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
       const data=await res.json();
-      setResumen(data.resumen||"No se pudo generar el resumen.");
+       setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -653,6 +653,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
+  const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
+  const[verArchivados,setVerArchivados]=useState(false);
   const del=async id=>{
     if(!confirm("¿Eliminar este ítem?"))return;
     await sb.from("recetas").delete().eq("menu_item_id",id);
@@ -669,7 +671,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0}).eq("id",editId);setEditId(null);reload();};
   const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
   const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
-  const menuFiltrado=menu.filter(m=>m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const menuFiltrado=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const archivados=menu.filter(m=>m.archivado);
   const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
   const costoItem=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
   return(
@@ -695,10 +698,10 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                 {editId===m.id?(
                   <>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
+                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
                     <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
-                    </>
+                  </>
                 ):(
                 <>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
@@ -710,6 +713,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
+                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggleArchivar(m)}>🗄 Archivar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
@@ -723,6 +727,17 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       ))}
       {!menu.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste el menú.</div>}
       {menu.length>0&&!cats.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún plato o bebida con ese nombre.</div>}
+      {archivados.length>0&&<div style={{marginTop:26}}>
+        <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>setVerArchivados(!verArchivados)}>🗄 {verArchivados?"Ocultar":"Ver"} archivados ({archivados.length})</button>
+        {verArchivados&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12,marginTop:12}}>
+          {archivados.map(m=>(
+            <div key={m.id} className="card" style={{padding:14,display:"flex",justifyContent:"space-between",alignItems:"center",opacity:.7}}>
+              <div><div style={{fontWeight:700,fontSize:15}}>{m.nombre}</div><div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{money(m.precio)}</div></div>
+              <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggleArchivar(m)}>↩️ Desarchivar</button>
+            </div>
+          ))}
+        </div>}
+      </div>}
     </div>
   );
 }
@@ -898,7 +913,7 @@ function PanelStock({userId,insumos,compras,reload}){
         );
       })()}
     </div>
-    );
+  );
 }
 
 function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
