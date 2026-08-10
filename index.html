@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+          <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -463,7 +463,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
 function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,reload,cambiar,logout}){
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
-  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"}];
+  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"recetas",label:"Recetas y Costos",icon:"🧮"},{id:"stock",label:"Compras",icon:"🛒"},{id:"caja",label:"Caja",icon:"💰"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
@@ -530,6 +530,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
+        {tab==="recetas"&&<PanelRecetasCostos userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
         {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
         {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} reload={reload}/>}
       </main>
@@ -697,8 +698,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
               <div key={m.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
                 {editId===m.id?(
                   <>
-                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
+                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
                     <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
                   </>
@@ -742,6 +743,77 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   );
 }
 
+function RecetaCard({item,recetas,insumos,userId,reload}){
+  const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
+  const[recFactor,setRecFactor]=useState(1);
+  const recs=recetas.filter(r=>r.menu_item_id===item.id);
+  const costo=recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);
+  const margen=item.precio-costo;
+  const pct=item.precio>0?Math.round(margen/item.precio*100):0;
+  const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:item.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
+  const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
+  return(
+    <div className="card" style={{padding:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4}}>
+        <div style={{fontWeight:700,fontSize:16}}>{item.nombre}</div>
+        <div style={{fontWeight:800,fontSize:17,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(item.precio)}</div>
+      </div>
+      {recs.length>0?(
+        <div style={{fontSize:14,color:margen<0?"var(--warn)":"var(--accent)",fontWeight:700,marginBottom:10}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>
+      ):(
+        <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:10}}>Todavía sin receta cargada — el costo va a dar $0 hasta que le agregues insumos.</div>
+      )}
+      <RecetaEditor item={item} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>
+    </div>
+  );
+}
+function PanelRecetasCostos({userId,menu,insumos,recetas,reload}){
+  const[busqueda,setBusqueda]=useState("");
+  const items=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const cats=[...new Set(items.map(m=>m.categoria))];
+  const costoDe=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  const tabla=[...items].map(m=>{const costo=costoDe(m);return{...m,costo,margen:m.precio-costo};}).sort((a,b)=>b.margen-a.margen);
+  return(
+    <div>
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🧮 Acá ves y armás la receta de cada plato o bebida, con el costo y la ganancia calculados al toque — sin tener que ir a buscarlos uno por uno en el Menú.</span>
+      </div>
+      {tabla.length>0&&<div className="card" style={{padding:0,marginBottom:22,overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+          <thead>
+            <tr style={{borderBottom:"2px solid var(--line)"}}>
+              <th style={{textAlign:"left",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Producto</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Costo</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Precio venta</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Ganancia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tabla.map(m=>(
+              <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
+                <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>}
+      <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
+      {cats.map(cat=>(
+        <div key={cat} style={{marginBottom:22}}>
+          <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
+            {items.filter(m=>m.categoria===cat).map(m=><RecetaCard key={m.id} item={m} recetas={recetas} insumos={insumos} userId={userId} reload={reload}/>)}
+          </div>
+        </div>
+      ))}
+      {!menu.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste el menú.</div>}
+      {menu.length>0&&!cats.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún plato o bebida con ese nombre.</div>}
+    </div>
+  );
+}
 function PanelStock({userId,insumos,compras,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
   const[form,setForm]=useState({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});
@@ -826,7 +898,7 @@ function PanelStock({userId,insumos,compras,reload}){
           {pasoCompra===2&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto pagaste en total?</div>
             <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>El precio de todo lo que compraste junto, no de una sola unidad.</div>
-            <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
+             <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
             <input className="field" inputMode="decimal" style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.precio_total} onChange={e=>setCompra({...compra,precio_total:num(e.target.value)})} placeholder="ej: 9000"/>
             <div style={{display:"flex",gap:10,marginTop:16}}>
               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(1)}>← Atrás</button>
