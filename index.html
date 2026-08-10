@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
     return(
       <div>
         <TopBar titulo={`Mesa ${mesaSel.numero}`} identidad={identidad} cambiar={cambiar} logout={logout}/>
-      <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
+        <div style={{padding:18,maxWidth:640,margin:"0 auto"}}>
           <button className="bg" style={{marginBottom:14}} onClick={()=>setMesaId(null)}>← Volver</button>
           {ultimoAgregado&&<div className="card" style={{padding:"10px 14px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",background:"var(--accent-tint)",borderColor:"var(--accent)"}}>
             <span style={{fontSize:14.5,color:"var(--accent)",fontWeight:700}}>✅ Se agregó: {ultimoAgregado.nombre}</span>
@@ -653,7 +653,16 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
-  const del=async id=>{if(confirm("¿Eliminar este ítem?")){{await sb.from("menu_items").delete().eq("id",id);reload();}}};
+  const del=async id=>{
+    if(!confirm("¿Eliminar este ítem?"))return;
+    await sb.from("recetas").delete().eq("menu_item_id",id);
+    const{error}=await sb.from("menu_items").delete().eq("id",id);
+    if(error){
+      alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
+      return;
+    }
+    reload();
+  };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
   const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio)});};
@@ -689,7 +698,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
                     <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
-                  </>
+                    </>
                 ):(
                 <>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
@@ -739,7 +748,18 @@ function PanelStock({userId,insumos,compras,reload}){
     await sb.from("compras").insert({user_id:userId,insumo_id:compra.insumo_id,cantidad:cant,precio_unitario:precio});
     setCompra({insumo_id:"",cantidad:"",precio_total:""});setOpenC(false);reload();
   };
-  const del=async id=>{if(confirm("¿Eliminar este insumo?")){{await sb.from("insumos").delete().eq("id",id);reload();}}};
+  const del=async id=>{
+    if(!confirm("¿Eliminar este insumo?"))return;
+    const{error}=await sb.from("insumos").delete().eq("id",id);
+    if(error){
+      if(confirm("Este insumo está usado en la receta de uno o más platos/bebidas, por eso no se puede borrar directo. ¿Querés borrarlo igual? (se va a sacar también de esas recetas)")){
+        await sb.from("recetas").delete().eq("insumo_id",id);
+        const{error:error2}=await sb.from("insumos").delete().eq("id",id);
+        if(error2){alert("No se pudo borrar: "+error2.message);return;}
+      }else return;
+    }
+    reload();
+  };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
   const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
@@ -878,7 +898,7 @@ function PanelStock({userId,insumos,compras,reload}){
         );
       })()}
     </div>
-  );
+    );
 }
 
 function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
