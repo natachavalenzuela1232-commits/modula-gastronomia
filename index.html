@@ -1,4 +1,4 @@
-          <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -64,6 +64,11 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const money=n=>`$${Number(n||0).toLocaleString("es-AR")}`;
 const hora=iso=>new Date(iso).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
 const hoy=()=>new Date().toISOString().slice(0,10);
+const costoProducto=(item,recetas,insumos)=>{
+  if(item.usa_receta===false)return Number(item.costo_manual)||0;
+  const recs=recetas.filter(r=>r.menu_item_id===item.id);
+  return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);
+};
 
 function Login(){
   const[mode,setMode]=useState("signin");
@@ -134,7 +139,7 @@ function SelectorIdentidad({empleados,onElegir}){
 function App(){
   const[session,setSession]=useState(undefined);
   const[identidad,setIdentidad]=useState(null);
-  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[],mensajes:[]});
+  const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[],mensajes:[],gastos:[],ingresosExtra:[],config:{umbral_aumento_costo:15,umbral_margen_bajo:25}});
   const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
@@ -145,7 +150,7 @@ function App(){
 
   const loadAll=async()=>{
     const corte=new Date(Date.now()-60*24*60*60*1000).toISOString();
-    const[e,m,mn,p,it,ins,rec,ci,cp,msg]=await Promise.all([
+    const[e,m,mn,p,it,ins,rec,ci,cp,msg,ga,cfg,ie]=await Promise.all([
       sb.from("empleados").select("*").order("created_at"),
       sb.from("mesas").select("*").order("numero"),
       sb.from("menu_items").select("*").order("categoria"),
@@ -156,12 +161,17 @@ function App(){
       sb.from("cierres_caja").select("*").order("fecha",{ascending:false}).limit(400),
       sb.from("compras").select("*").gte("created_at",corte).order("created_at",{ascending:false}),
       sb.from("mensajes_pedido").select("*").gte("created_at",corte).order("created_at"),
+      sb.from("gastos").select("*").order("fecha",{ascending:false}).limit(400),
+      sb.from("configuracion").select("*").eq("user_id",session.user.id),
+      sb.from("ingresos_extra").select("*").order("fecha",{ascending:false}).limit(400),
     ]);
+    const cfgRow=cfg.data?.[0];
     setData({
       empleados:e.data||[],mesas:m.data||[],menu:mn.data||[],
       pedidos:p.data||[],items:it.data||[],insumos:ins.data||[],
       recetas:rec.data||[],cierres:ci.data||[],compras:cp.data||[],
-      mensajes:msg.data||[],
+      mensajes:msg.data||[],gastos:ga.data||[],ingresosExtra:ie.data||[],
+      config:{umbral_aumento_costo:cfgRow?.umbral_aumento_costo??15,umbral_margen_bajo:cfgRow?.umbral_margen_bajo??25},
     });
     setLoading(false);
   };
@@ -236,7 +246,7 @@ function ChatHilo({itemId,mensajes,autor,userId,reload}){
     </div>
   );
 }
-function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,cambiar,logout}){
+function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,insumos,reload,cambiar,logout}){
   const[mesaId,setMesaId]=useState(()=>localStorage.getItem("modula_mesa")||null);
   const[acl,setAcl]=useState("");
   const[pidiendoPago,setPidiendoPago]=useState(false);
@@ -263,6 +273,18 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
   const pedSel=mesaSel?pedidos.find(p=>p.mesa_id===mesaSel.id):null;
   const itemsMesa=pedSel?items.filter(i=>i.pedido_id===pedSel.id):[];
   const abrirMesa=m=>{setMesaId(m.id);};
+  const descontarStock=async menuItemId=>{
+    const recs=recetas.filter(r=>r.menu_item_id===menuItemId);
+    for(const r of recs){
+      await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:-Number(r.cantidad)});
+    }
+  };
+  const restaurarStock=async menuItemId=>{
+    const recs=recetas.filter(r=>r.menu_item_id===menuItemId);
+    for(const r of recs){
+      await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:Number(r.cantidad)});
+    }
+  };
   const[ultimoAgregado,setUltimoAgregado]=useState(null);
   const agregarItem=async mi=>{
     if(!mesaSel)return;
@@ -273,18 +295,26 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,reload,ca
       pedActual=nuevoPed;
     }
     const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedActual.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
-    setAcl("");reload();
+    setAcl("");
     if(nuevo){
-      setUltimoAgregado(nuevo);
+      await descontarStock(mi.id);  
+     setUltimoAgregado(nuevo);
       setTimeout(()=>setUltimoAgregado(u=>u?.id===nuevo.id?null:u),5000);
     }
+    reload();
   };
   const deshacerUltimo=async()=>{
     if(!ultimoAgregado)return;
     await sb.from("pedido_items").delete().eq("id",ultimoAgregado.id);
+    if(ultimoAgregado.menu_item_id)await restaurarStock(ultimoAgregado.menu_item_id);
     setUltimoAgregado(null);reload();
   };
-  const borrarItem=async i=>{if(!confirm(`¿Borrar "${i.nombre}" del pedido?`))return;await sb.from("pedido_items").delete().eq("id",i.id);reload();};
+  const borrarItem=async i=>{
+    if(!confirm(`¿Borrar "${i.nombre}" del pedido?`))return;
+    await sb.from("pedido_items").delete().eq("id",i.id);
+    if(i.menu_item_id)await restaurarStock(i.menu_item_id);
+    reload();
+  };
   const marcarEntregado=async i=>{await sb.from("pedido_items").update({estado:"entregado"}).eq("id",i.id);reload();};
   const cerrarMesa=async metodo=>{
     const total=itemsMesa.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
@@ -460,15 +490,15 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
 }
 
 // ---- VISTA DUEÑO ----
-function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,reload,cambiar,logout}){
+function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
-  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"recetas",label:"Recetas y Costos",icon:"🧮"},{id:"stock",label:"Compras",icon:"🛒"},{id:"caja",label:"Caja",icon:"💰"}];
+  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
-  const[resumenLoading,setResumenLoading]=useState(false);
-  const costoItemVD=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  const[resumenLoading,setResumenLoading]=useState(false); 
+    const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const generarResumen=async()=>{
     setResumenLoading(true);setResumen(null);
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
@@ -498,7 +528,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         body:JSON.stringify({totalHoy:totalHoyReal,mesasAtendidas:mesasAtendidasReal,productosVendidos,costoTotal:Math.round(costoTotal),margen:Math.round(margen),comprasNecesarias}),
       });
       const data=await res.json();
-       setResumen(data.resumen||"No se pudo generar el resumen.");
+      setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
   };
@@ -530,9 +560,11 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
-        {tab==="recetas"&&<PanelRecetasCostos userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
-        {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} compras={compras} reload={reload}/>}
-        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} reload={reload}/>}
+        {tab==="compras"&&<PanelCompras userId={userId} insumos={insumos} compras={compras} recetas={recetas} menu={menu} config={config} reload={reload}/>}
+        {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} reload={reload}/>}
+        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} compras={compras} gastos={gastos} ingresosExtra={ingresosExtra} reload={reload}/>}
+        {tab==="resultados"&&<PanelResultados items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} compras={compras} config={config} mesas={mesas} cierres={cierres}/>}
+        {tab==="config"&&<PanelConfiguracion userId={userId} config={config} reload={reload}/>}
       </main>
     </div>
   );
@@ -645,13 +677,13 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
   );
 }
 function PanelMenu({userId,menu,insumos,recetas,reload}){
-  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true});
+  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});
   const[open,setOpen]=useState(false);
   const[selItem,setSelItem]=useState(null);
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
   const[busqueda,setBusqueda]=useState("");
-  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({...form,precio:Number(form.precio)||0,user_id:userId});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true});setOpen(false);reload();};
+  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
@@ -666,26 +698,62 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
     }
     reload();
   };
-  const[editId,setEditId]=useState(null);
+   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
-  const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio)});};
-  const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0}).eq("id",editId);setEditId(null);reload();};
+  const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio),usaReceta:m.usa_receta!==false,costoManual:m.costo_manual!=null?String(m.costo_manual):"",margenObjetivo:m.margen_objetivo!=null?String(m.margen_objetivo):""});};
+  const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0,usa_receta:editForm.usaReceta,costo_manual:editForm.usaReceta?null:(Number(editForm.costoManual)||0),margen_objetivo:editForm.margenObjetivo?Number(editForm.margenObjetivo):null}).eq("id",editId);setEditId(null);reload();};
   const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad||!selItem)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:selItem.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
   const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
   const menuFiltrado=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const archivados=menu.filter(m=>m.archivado);
   const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
-  const costoItem=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  const costoItem=item=>costoProducto(item,recetas,insumos);
+  const[verTabla,setVerTabla]=useState(false);
+  const tablaRent=[...menu.filter(m=>!m.archivado)].map(m=>{const costo=costoItem(m);return{...m,costo,margen:m.precio-costo};}).sort((a,b)=>b.margen-a.margen);
   return(
     <div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo ítem del menú</button>
-      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
-        <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
-        <button className="bp" onClick={add}>Guardar</button>
+      <button className="bg" style={{marginBottom:16,marginLeft:8}} onClick={()=>setVerTabla(!verTabla)}>📊 {verTabla?"Ocultar":"Ver"} tabla de rentabilidad</button>
+      {verTabla&&tablaRent.length>0&&<div className="card" style={{padding:0,marginBottom:16,overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+          <thead>
+            <tr style={{borderBottom:"2px solid var(--line)"}}>
+              <th style={{textAlign:"left",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Producto</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Costo</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Precio venta</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Ganancia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tablaRent.map(m=>(
+              <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
+                <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>}
+      {open&&(()=>{
+        const costoCreate=form.usaReceta?0:(Number(form.costoManual)||0);
+        const precioSugCreate=form.margenObjetivo&&costoCreate>0?Math.round(costoCreate/(1-Number(form.margenObjetivo)/100)):null;
+        return(
+        <div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
+          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
+          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
+          <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
+          <div style={{width:"100%",borderTop:"1px solid var(--line)",paddingTop:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={!form.usaReceta} onChange={e=>setForm({...form,usaReceta:!e.target.checked})}/> Sin receta (cargar costo directo)</label>
+            {!form.usaReceta&&<div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><input className="field" style={{width:110}} value={form.costoManual} onChange={e=>setForm({...form,costoManual:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 900"/></div>}
+            <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Margen objetivo (opcional)</label><input className="field" style={{width:90}} value={form.margenObjetivo} onChange={e=>setForm({...form,margenObjetivo:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 65"/></div>
+            {precioSugCreate&&<button className="bg" style={{fontSize:13.5}} onClick={()=>setForm({...form,precio:String(precioSugCreate)})}>💡 Precio sugerido: {money(precioSugCreate)} — usar</button>}
+          </div>
+          <button className="bp" onClick={add}>Guardar</button>
+        </div>
+        );})()}
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>💡 Acá cargás lo que vendés. En cada plato o bebida, tocá <b>📦 Receta</b> y cargá exactamente qué insumos y qué cantidad de cada uno lleva — con eso, la app calcula sola el costo y la ganancia real de cada venta.</span>
       </div>
@@ -696,14 +764,21 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
             {menuFiltrado.filter(m=>m.categoria===cat).map(m=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
               <div key={m.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
-                {editId===m.id?(
+                {editId===m.id?(()=>{
+                  const costoEdit=editForm.usaReceta?costoItem(m):(Number(editForm.costoManual)||0);
+                  const precioSugEdit=editForm.margenObjetivo&&costoEdit>0?Math.round(costoEdit/(1-Number(editForm.margenObjetivo)/100)):null;
+                  return(
                   <>
-                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
+                    <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13.5,fontWeight:600,color:"var(--ink-soft)"}}><input type="checkbox" checked={!editForm.usaReceta} onChange={e=>setEditForm({...editForm,usaReceta:!e.target.checked})}/> Sin receta (costo directo)</label>
+                    {!editForm.usaReceta&&<div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><input className="field" value={editForm.costoManual} onChange={e=>setEditForm({...editForm,costoManual:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 900"/></div>}
+                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Margen objetivo % (opcional)</label><input className="field" style={{width:90}} value={editForm.margenObjetivo} onChange={e=>setEditForm({...editForm,margenObjetivo:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 65"/></div>
+                    {precioSugEdit&&<button className="bg" style={{fontSize:13}} onClick={()=>setEditForm({...editForm,precio:String(precioSugEdit)})}>💡 Precio sugerido: {money(precioSugEdit)} — usar</button>}
                     <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
                   </>
-                ):(
+                  );})():(
                 <>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                     <div><div style={{fontWeight:700,fontSize:16}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
@@ -711,14 +786,14 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   </div>
                   <div style={{fontWeight:800,fontSize:19,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(m.precio)}</div>
                   <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
-                    <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>
+                    {m.usa_receta!==false?<button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:selItem?.id===m.id?"var(--accent-tint)":"transparent",borderColor:selItem?.id===m.id?"var(--accent)":"var(--line)"}} onClick={()=>setSelItem(selItem?.id===m.id?null:m)}>📦 Receta {selItem?.id===m.id?"▲":"▼"}</button>:<span className="tag" style={{background:"var(--surface-2)",color:"var(--ink-soft)"}}>💲 Costo manual</span>}
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(m)}>✏️ Editar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggle(m)}>{m.activo?"Pausar":"Activar"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>toggleArchivar(m)}>🗄 Archivar</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 10px",background:m.va_a_cocina?"transparent":"var(--warn-tint)",borderColor:m.va_a_cocina?"var(--line)":"var(--warn)",color:m.va_a_cocina?"var(--ink-soft)":"var(--warn)"}} onClick={()=>toggleCocina(m)}>{m.va_a_cocina?"🍳 Va a cocina":"🥤 Directo"}</button>
                     <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(m.id)}>🗑</button>
                   </div>
-                  {selItem?.id===m.id&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
+                  {selItem?.id===m.id&&m.usa_receta!==false&&<RecetaEditor item={m} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>}
                 </>
                 )}
               </div>
@@ -743,90 +818,16 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   );
 }
 
-function RecetaCard({item,recetas,insumos,userId,reload}){
-  const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
-  const[recFactor,setRecFactor]=useState(1);
-  const recs=recetas.filter(r=>r.menu_item_id===item.id);
-  const costo=recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);
-  const margen=item.precio-costo;
-  const pct=item.precio>0?Math.round(margen/item.precio*100):0;
-  const addRec=async()=>{if(!recForm.insumo_id||!recForm.cantidad)return;await sb.from("recetas").insert({user_id:userId,menu_item_id:item.id,insumo_id:recForm.insumo_id,cantidad:Number(recForm.cantidad)*recFactor});setRecForm({insumo_id:"",cantidad:""});setRecFactor(1);reload();};
-  const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
-  return(
-    <div className="card" style={{padding:16}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8,marginBottom:4}}>
-        <div style={{fontWeight:700,fontSize:16}}>{item.nombre}</div>
-        <div style={{fontWeight:800,fontSize:17,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(item.precio)}</div>
-      </div>
-      {recs.length>0?(
-        <div style={{fontSize:14,color:margen<0?"var(--warn)":"var(--accent)",fontWeight:700,marginBottom:10}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>
-      ):(
-        <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:10}}>Todavía sin receta cargada — el costo va a dar $0 hasta que le agregues insumos.</div>
-      )}
-      <RecetaEditor item={item} recetas={recetas} insumos={insumos} recForm={recForm} setRecForm={setRecForm} recFactor={recFactor} setRecFactor={setRecFactor} addRec={addRec} delRec={delRec}/>
-    </div>
-  );
-}
-function PanelRecetasCostos({userId,menu,insumos,recetas,reload}){
-  const[busqueda,setBusqueda]=useState("");
-  const items=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
-  const cats=[...new Set(items.map(m=>m.categoria))];
-  const costoDe=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
-  const tabla=[...items].map(m=>{const costo=costoDe(m);return{...m,costo,margen:m.precio-costo};}).sort((a,b)=>b.margen-a.margen);
-  return(
-    <div>
-      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
-        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🧮 Acá ves y armás la receta de cada plato o bebida, con el costo y la ganancia calculados al toque — sin tener que ir a buscarlos uno por uno en el Menú.</span>
-      </div>
-      {tabla.length>0&&<div className="card" style={{padding:0,marginBottom:22,overflowX:"auto"}}>
-        <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
-          <thead>
-            <tr style={{borderBottom:"2px solid var(--line)"}}>
-              <th style={{textAlign:"left",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Producto</th>
-              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Costo</th>
-              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Precio venta</th>
-              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Ganancia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tabla.map(m=>(
-              <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
-                <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
-                <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>}
-      <input className="field" placeholder="🔎 Buscar plato o bebida…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:18}}/>
-      {cats.map(cat=>(
-        <div key={cat} style={{marginBottom:22}}>
-          <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-            {items.filter(m=>m.categoria===cat).map(m=><RecetaCard key={m.id} item={m} recetas={recetas} insumos={insumos} userId={userId} reload={reload}/>)}
-          </div>
-        </div>
-      ))}
-      {!menu.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste el menú.</div>}
-      {menu.length>0&&!cats.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún plato o bebida con ese nombre.</div>}
-    </div>
-  );
-}
-function PanelStock({userId,insumos,compras,reload}){
+function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
-  const[form,setForm]=useState({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});
-  const[open,setOpen]=useState(false);
   const[compra,setCompra]=useState({insumo_id:"",cantidad:"",precio_total:""});
   const[openC,setOpenC]=useState(false);
   const[pasoCompra,setPasoCompra]=useState(0);
-  const[busqueda,setBusqueda]=useState("");
-  const insumosFiltrados=insumos.filter(i=>i.nombre.toLowerCase().includes(busqueda.toLowerCase()));
-  const add=async()=>{if(!form.nombre)return;await sb.from("insumos").insert({...form,stock_actual:Number(form.stock_actual)||0,stock_minimo:Number(form.stock_minimo)||1,precio_compra:Number(form.precio_compra)||0,user_id:userId});setForm({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});setOpen(false);reload();};
   const cantCompra=Number(compra.cantidad)||0;
   const totalCompra=Number(compra.precio_total)||0;
   const precioUnitCalc=cantCompra>0?totalCompra/cantCompra:0;
+  const UMBRAL_AUMENTO=config?.umbral_aumento_costo??15;
+  const productosAfectados=insumoId=>menu.filter(m=>!m.archivado&&recetas.some(r=>r.menu_item_id===m.id&&r.insumo_id===insumoId));
   const registrarCompra=async()=>{
     if(!compra.insumo_id||!compra.cantidad)return;
     const cant=Number(compra.cantidad);const precio=precioUnitCalc;
@@ -835,39 +836,12 @@ function PanelStock({userId,insumos,compras,reload}){
     await sb.from("compras").insert({user_id:userId,insumo_id:compra.insumo_id,cantidad:cant,precio_unitario:precio});
     setCompra({insumo_id:"",cantidad:"",precio_total:""});setOpenC(false);reload();
   };
-  const del=async id=>{
-    if(!confirm("¿Eliminar este insumo?"))return;
-    const{error}=await sb.from("insumos").delete().eq("id",id);
-    if(error){
-      if(confirm("Este insumo está usado en la receta de uno o más platos/bebidas, por eso no se puede borrar directo. ¿Querés borrarlo igual? (se va a sacar también de esas recetas)")){
-        await sb.from("recetas").delete().eq("insumo_id",id);
-        const{error:error2}=await sb.from("insumos").delete().eq("id",id);
-        if(error2){alert("No se pudo borrar: "+error2.message);return;}
-      }else return;
-    }
-    reload();
-  };
-  const[editId,setEditId]=useState(null);
-  const[editForm,setEditForm]=useState({});
-  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
-  const guardarEdicion=async()=>{
-    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:Number(editForm.precio_compra)||0}).eq("id",editId);
-    setEditId(null);reload();
-  };
-  const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   return(
     <div>
-      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        <button className="bp" onClick={()=>{setOpen(!open);setOpenC(false);}}>➕ Nuevo insumo</button>
-        <button className="bp" style={{background:"var(--accent)"}} onClick={()=>{setOpenC(!openC);setOpen(false);setPasoCompra(0);}}>📥 Registrar compra</button>
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🛒 Acá registrás cada compra que hacés para el negocio. Elegís qué compraste, cuánto contenía y cuánto pagaste en total — la app calcula sola el precio por unidad y suma al Stock.</span>
       </div>
-      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-        <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" style={{width:120}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:150}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja". Para bebidas que se sirven a medida (Fernet, Gin, Speed), elegí "mililitros".</div></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:110}}>Cuando baje de este número, la app avisa "stock bajo".</div></div>
-        <button className="bp" onClick={add}>Guardar</button>
-        <div style={{flexBasis:"100%",fontSize:13.5,color:"var(--ink-soft)"}}>El insumo se crea sin stock ni precio — apenas lo guardes, usá "📥 Registrar compra" (ahí abajo) para cargar la primera compra: la app calcula el precio sola, sin que hagas ninguna cuenta.</div>
-      </div>}
+      <button className="bp" style={{background:"var(--accent)",marginBottom:16}} onClick={()=>{setOpenC(!openC);setPasoCompra(0);}}>📥 Registrar compra</button>
       {openC&&(()=>{
         const insumoSel=insumos.find(i=>i.id===compra.insumo_id);
         return(
@@ -898,7 +872,7 @@ function PanelStock({userId,insumos,compras,reload}){
           {pasoCompra===2&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto pagaste en total?</div>
             <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>El precio de todo lo que compraste junto, no de una sola unidad.</div>
-             <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
+            <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
             <input className="field" inputMode="decimal" style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.precio_total} onChange={e=>setCompra({...compra,precio_total:num(e.target.value)})} placeholder="ej: 9000"/>
             <div style={{display:"flex",gap:10,marginTop:16}}>
               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(1)}>← Atrás</button>
@@ -906,54 +880,38 @@ function PanelStock({userId,insumos,compras,reload}){
             </div>
           </div>}
 
-          {pasoCompra===3&&<div>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
-            <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
-              <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
-              <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por cada {insumoSel?.unidad}</div>
+          {pasoCompra===3&&(()=>{
+            const precioAnterior=Number(insumoSel?.precio_compra)||0;
+            const huboPrecioAntes=precioAnterior>0;
+            const pctCambio=huboPrecioAntes?Math.round(((precioUnitCalc-precioAnterior)/precioAnterior)*100):0;
+            const subioMucho=huboPrecioAntes&&pctCambio>=UMBRAL_AUMENTO;
+            const afectados=subioMucho?productosAfectados(insumoSel.id):[];
+            return(
+            <div>
+              <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
+              <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
+                <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
+                <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por cada {insumoSel?.unidad}</div>
+                {huboPrecioAntes&&<div style={{fontSize:14,color:"var(--ink-soft)",marginTop:6}}>Antes pagabas {money(precioAnterior)} por {insumoSel?.unidad} {pctCambio!==0&&<span style={{fontWeight:700,color:pctCambio>0?"var(--warn)":"var(--accent)"}}>({pctCambio>0?"+":""}{pctCambio}%)</span>}</div>}
             </div>
-            <div style={{display:"flex",gap:10}}>
-              <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(2)}>← Atrás</button>
-              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} onClick={()=>{registrarCompra();setPasoCompra(0);}}>✅ Confirmar y guardar</button>
+              {subioMucho&&<div className="card" style={{padding:16,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+                <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ El precio subió {pctCambio}% respecto a la última compra</div>
+                {afectados.length>0?(
+                  <>
+                    <div style={{fontSize:14,color:"var(--warn)",marginBottom:6}}>Esto va a afectar el costo de {afectados.length} producto{afectados.length!==1?"s":""} del menú:</div>
+                    {afectados.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre}</div>)}
+                  </>
+                ):<div style={{fontSize:14,color:"var(--warn)"}}>Todavía no usás este insumo en ninguna receta del menú.</div>}
+              </div>}
+              <div style={{display:"flex",gap:10}}>
+                <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(2)}>← Atrás</button>
+                <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} onClick={()=>{registrarCompra();setPasoCompra(0);}}>✅ Confirmar y guardar</button>
+              </div>
             </div>
-          </div>}
+            );})()}
         </div>
         );})()}
-      {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
-        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
-        {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
-      </div>}
-      <div className="card" style={{padding:"12px 16px",marginBottom:14,background:"var(--surface-2)",border:"none"}}>
-        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>💡 Acá cargás lo que comprás para el negocio. <b>Unidad</b>: cómo lo contás de a 1 (kg, litro, unidad). <b>Stock</b>: cuánto tenés ahora. <b>Mínimo</b>: cuándo avisarte que hay que reponer. <b>Precio</b>: cuánto sale esa única unidad — con esto la app calcula el costo real de cada plato.</span>
-      </div>
-      <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12}}>
-        {insumosFiltrados.map(i=>editId===i.id?(
-          <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja".</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad.</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {editForm.unidad||"unidad"}</label><input className="field" inputMode="decimal" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:num(e.target.value)})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
-            <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
-          </div>
-        ):(
-          <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-              <div><div style={{fontWeight:700,fontSize:16}}>{i.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
-              <span className="tag" style={{background:i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)",whiteSpace:"nowrap"}}>{i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
-            </div>
-            <div style={{fontWeight:800,fontSize:20,fontFamily:"'Fraunces',serif",color:i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{i.stock_actual} {i.unidad}<span style={{fontSize:13.5,fontWeight:600,color:"var(--ink-soft)",fontFamily:"'Manrope',sans-serif"}}> · mín: {i.stock_minimo}</span></div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
-              <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
-              <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(i.id)}>🗑</button>
-            </div>
-          </div>
-        ))}
-        {!insumos.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
-        {insumos.length>0&&!insumosFiltrados.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún insumo con ese nombre.</div>}
-      </div>
-      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",margin:"26px 0 12px"}}>HISTORIAL DE COMPRAS</div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",margin:"10px 0 12px"}}>HISTORIAL DE COMPRAS</div>
       {!compras.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no registraste ninguna compra.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:12}}>
         {compras.map(c=>{const ins=insumos.find(ii=>ii.id===c.insumo_id);return(
@@ -988,12 +946,121 @@ function PanelStock({userId,insumos,compras,reload}){
   );
 }
 
-function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
+function PanelStock({userId,insumos,reload}){
+  const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
+  const[form,setForm]=useState({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});
+  const[open,setOpen]=useState(false);
+  const[busqueda,setBusqueda]=useState("");
+  const insumosFiltrados=insumos.filter(i=>i.nombre.toLowerCase().includes(busqueda.toLowerCase()));
+  const add=async()=>{if(!form.nombre)return;await sb.from("insumos").insert({...form,stock_actual:Number(form.stock_actual)||0,stock_minimo:Number(form.stock_minimo)||1,precio_compra:Number(form.precio_compra)||0,user_id:userId});setForm({nombre:"",unidad:"unidad",stock_actual:"",stock_minimo:"1",precio_compra:""});setOpen(false);reload();};
+  const del=async id=>{
+    if(!confirm("¿Eliminar este insumo?"))return;
+    const{error}=await sb.from("insumos").delete().eq("id",id);
+    if(error){
+      if(confirm("Este insumo está usado en la receta de uno o más platos/bebidas, por eso no se puede borrar directo. ¿Querés borrarlo igual? (se va a sacar también de esas recetas)")){
+        await sb.from("recetas").delete().eq("insumo_id",id);
+        const{error:error2}=await sb.from("insumos").delete().eq("id",id);
+        if(error2){alert("No se pudo borrar: "+error2.message);return;}
+      }else return;
+    }
+    reload();
+  };
+  const[editId,setEditId]=useState(null);
+  const[editForm,setEditForm]=useState({});
+  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
+  const guardarEdicion=async()=>{
+    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:Number(editForm.precio_compra)||0}).eq("id",editId);
+    setEditId(null);reload();
+  };
+  const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
+  return(
+    <div>
+      <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo insumo</button>
+      {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+        <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Coca-Cola 500ml"/></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" style={{width:120}} value={form.unidad} onChange={e=>setForm({...form,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:150}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja". Para bebidas que se sirven a medida (Fernet, Gin, Speed), elegí "mililitros".</div></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo</label><input className="field" type="number" style={{width:90}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)",maxWidth:110}}>Cuando baje de este número, la app avisa "stock bajo".</div></div>
+        <button className="bp" onClick={add}>Guardar</button>
+        <div style={{flexBasis:"100%",fontSize:13.5,color:"var(--ink-soft)"}}>El insumo se crea sin stock ni precio — apenas lo guardes, andá a "🛒 Compras" para cargar la primera compra: la app calcula el precio sola, sin que hagas ninguna cuenta.</div>
+      </div>}
+      {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
+        {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {i.stock_actual} {i.unidad} (mínimo: {i.stock_minimo})</div>)}
+      </div>}
+      <div className="card" style={{padding:"12px 16px",marginBottom:14,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📦 Acá ves la ficha de cada insumo: cuánto tenés, en qué unidad lo contás y cuándo avisarte que hay que reponer. Para sumar stock nuevo, usá la pestaña "🛒 Compras".</span>
+      </div>
+      <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12}}>
+        {insumosFiltrados.map(i=>editId===i.id?(
+          <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja".</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad.</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {editForm.unidad||"unidad"}</label><input className="field" inputMode="decimal" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:num(e.target.value)})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
+            <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
+          </div>
+        ):(
+          <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+              <div><div style={{fontWeight:700,fontSize:16}}>{i.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>Precio compra: {money(i.precio_compra)} / {i.unidad}</div></div>
+              <span className="tag" style={{background:i.stock_actual<0?"#F8D7DA":i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<0?"#8B1E2B":i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)",whiteSpace:"nowrap"}}>{i.stock_actual<0?"⚠ Stock NEGATIVO":i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
+            </div>
+            <div style={{fontWeight:800,fontSize:20,fontFamily:"'Fraunces',serif",color:i.stock_actual<0?"#8B1E2B":i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{i.stock_actual} {i.unidad}<span style={{fontSize:13.5,fontWeight:600,color:"var(--ink-soft)",fontFamily:"'Manrope',sans-serif"}}> · mín: {i.stock_minimo}</span></div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
+              <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
+              <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(i.id)}>🗑</button>
+            </div>
+          </div>
+        ))}
+        {!insumos.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste insumos. Agregá los productos que comprás para el negocio.</div>}
+        {insumos.length>0&&!insumosFiltrados.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>No se encontró ningún insumo con ese nombre.</div>}
+      </div>
+    </div>
+  );
+}
+
+function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,gastos,ingresosExtra,reload}){
   const[metodo,setMetodo]=useState({});
   const[abierto,setAbierto]=useState(null);
   const[cierreAbierto,setCierreAbierto]=useState(null);
   const[detalleCierre,setDetalleCierre]=useState({});
-  const costoItemVD=item=>{const recs=recetas.filter(r=>r.menu_item_id===item.id);return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);};
+  const CATEGORIAS_GASTO=["Alquiler","Servicios","Sueldos","Mantenimiento","Publicidad","Impuestos","Otros"];
+  const[gastoForm,setGastoForm]=useState({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});
+  const[openGasto,setOpenGasto]=useState(false);
+  const agregarGasto=async()=>{
+    if(!gastoForm.monto||Number(gastoForm.monto)<=0)return;
+    await sb.from("gastos").insert({user_id:userId,categoria:gastoForm.categoria,monto:Number(gastoForm.monto),metodo_pago:gastoForm.metodo_pago,descripcion:gastoForm.descripcion.trim()||null});
+    setGastoForm({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});setOpenGasto(false);reload();
+  };
+  const borrarGasto=async id=>{if(!confirm("¿Borrar este gasto?"))return;await sb.from("gastos").delete().eq("id",id);reload();};
+  const[ingresoForm,setIngresoForm]=useState({monto:"",metodo_pago:"efectivo",descripcion:""});
+  const[openIngreso,setOpenIngreso]=useState(false);
+  const agregarIngreso=async()=>{
+    if(!ingresoForm.monto||Number(ingresoForm.monto)<=0)return;
+    await sb.from("ingresos_extra").insert({user_id:userId,monto:Number(ingresoForm.monto),metodo_pago:ingresoForm.metodo_pago,descripcion:ingresoForm.descripcion.trim()||null});
+    setIngresoForm({monto:"",metodo_pago:"efectivo",descripcion:""});setOpenIngreso(false);reload();
+  };
+  const borrarIngreso=async id=>{if(!confirm("¿Borrar este ingreso?"))return;await sb.from("ingresos_extra").delete().eq("id",id);reload();};
+  const gastosHoy=gastos.filter(g=>g.fecha===hoy());
+  const ingresosExtraHoy=ingresosExtra.filter(i=>i.fecha===hoy());
+  const comprasHoy=compras.filter(c=>c.fecha===hoy());
+  const totalGastosHoy=gastosHoy.reduce((s,g)=>s+Number(g.monto),0);
+  const totalIngresosExtraHoy=ingresosExtraHoy.reduce((s,i)=>s+Number(i.monto),0);
+  const totalComprasHoy=comprasHoy.reduce((s,c)=>s+Number(c.cantidad)*Number(c.precio_unitario),0);
+  const totalEgresosHoy=totalGastosHoy+totalComprasHoy;
+  const cierreHoyCaja=cierres.find(c=>c.fecha===hoy());
+  const ingresosVentasHoy=cierreHoyCaja?Number(cierreHoyCaja.total_general):0;
+  const totalIngresosHoy=ingresosVentasHoy+totalIngresosExtraHoy;
+  const porMedio=medio=>{
+    const ventas=medio==="efectivo"?Number(cierreHoyCaja?.total_efectivo||0):medio==="tarjeta"?Number(cierreHoyCaja?.total_tarjeta||0):medio==="transferencia"?Number(cierreHoyCaja?.total_transferencia||0):0;
+    const extra=ingresosExtraHoy.filter(i=>i.metodo_pago===medio).reduce((s,i)=>s+Number(i.monto),0);
+    const egreso=gastosHoy.filter(g=>g.metodo_pago===medio).reduce((s,g)=>s+Number(g.monto),0);
+    return{ingreso:ventas+extra,egreso};
+  };
+  const medios=["efectivo","tarjeta","transferencia","otro"];
+  const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const meses=[...new Set(cierres.map(c=>c.fecha.slice(0,7)))].sort((a,b)=>b<a?-1:1);
   const[mesSel,setMesSel]=useState(meses[0]||"");
   const[resumenMes,setResumenMes]=useState(null);
@@ -1030,7 +1097,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
     const{data:peds}=await sb.from("pedidos").select("*").eq("cierre_id",c.id);
     if(!peds||!peds.length){setDetalleCierre(prev=>({...prev,[c.id]:[]}));return;}
     const ids=peds.map(p=>p.id);
-    const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);
+    const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);  
     const conItems=peds.map(p=>({...p,itemsP:(its||[]).filter(i=>i.pedido_id===p.id)}));
     setDetalleCierre(prev=>({...prev,[c.id]:conItems}));
   };
@@ -1080,6 +1147,95 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
   const totalGeneral=pedidos.reduce((s,p)=>s+items.filter(i=>i.pedido_id===p.id).reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0),0);
   return(
     <div>
+      <div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>BALANCE DE HOY</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:16,marginBottom:10}}>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>INGRESOS (ventas + otros)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--accent)"}}>{money(totalIngresosHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>EGRESOS (compras + gastos)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary)"}}>{money(totalEgresosHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>SALDO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:totalIngresosHoy-totalEgresosHoy<0?"var(--warn)":"var(--ink)"}}>{money(totalIngresosHoy-totalEgresosHoy)}</div></div>
+        </div>
+        {!cierreHoyCaja&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>Todavía no cerraste la caja de hoy, así que "Ventas" está en $0 hasta que cierres el día.</div>}
+        <div style={{fontSize:14,fontWeight:700,color:"var(--ink-soft)",marginTop:6,marginBottom:8,borderTop:"1px solid var(--line)",paddingTop:12}}>Por medio de pago</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+          {medios.map(md=>{const{ingreso,egreso}=porMedio(md);return(
+            <div key={md} style={{fontSize:13.5}}>
+              <div style={{fontWeight:700,textTransform:"capitalize"}}>{md}</div>
+              <div style={{color:"var(--accent)"}}>+{money(ingreso)}</div>
+              <div style={{color:"var(--primary)"}}>−{money(egreso)}</div>
+            </div>
+          );})}
+        </div>
+        <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:10}}>Este desglose no incluye compras, porque todavía no se registra el medio de pago de cada compra.</div>
+      </div>
+      <div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>OTROS INGRESOS</div>
+          <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
+        </div>
+        {openIngreso&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><input className="field" style={{width:120}} inputMode="decimal" value={ingresoForm.monto} onChange={e=>setIngresoForm({...ingresoForm,monto:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 5000"/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Medio de pago</label>
+            <select className="field" value={ingresoForm.metodo_pago} onChange={e=>setIngresoForm({...ingresoForm,metodo_pago:e.target.value})}>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Descripción (opcional)</label><input className="field" value={ingresoForm.descripcion} onChange={e=>setIngresoForm({...ingresoForm,descripcion:e.target.value})} placeholder="ej: alquiler del salón"/></div>
+          <button className="bp" onClick={agregarIngreso}>Guardar</button>
+        </div>}
+        {!ingresosExtra.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no registraste ningún ingreso extra.</div>}
+        {ingresosExtra.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:12}}>
+          {ingresosExtra.map(i=>(
+            <div key={i.id} className="card" style={{padding:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                <div style={{fontWeight:700,fontSize:15}}>{i.descripcion||"Ingreso"}</div>
+                <div style={{fontWeight:700,color:"var(--accent)",whiteSpace:"nowrap"}}>{money(i.monto)}</div>
+              </div>
+              <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:2}}>{i.fecha} · {i.metodo_pago}</div>
+              <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarIngreso(i.id)}>🗑 Borrar</button>
+            </div>
+          ))}
+        </div>}
+      </div>
+      <div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>GASTOS OPERATIVOS</div>
+          <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenGasto(!openGasto)}>➕ Nuevo gasto</button>
+        </div>
+        {openGasto&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label>
+            <select className="field" value={gastoForm.categoria} onChange={e=>setGastoForm({...gastoForm,categoria:e.target.value})}>
+              {CATEGORIAS_GASTO.map(c=><option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><input className="field" style={{width:120}} inputMode="decimal" value={gastoForm.monto} onChange={e=>setGastoForm({...gastoForm,monto:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 15000"/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Medio de pago</label>
+            <select className="field" value={gastoForm.metodo_pago} onChange={e=>setGastoForm({...gastoForm,metodo_pago:e.target.value})}>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Descripción (opcional)</label><input className="field" value={gastoForm.descripcion} onChange={e=>setGastoForm({...gastoForm,descripcion:e.target.value})} placeholder="ej: alquiler de agosto"/></div>
+          <button className="bp" onClick={agregarGasto}>Guardar</button>
+        </div>}
+        {!gastos.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no registraste ningún gasto.</div>}
+        {gastos.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:12}}>
+          {gastos.map(g=>(
+            <div key={g.id} className="card" style={{padding:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                <div style={{fontWeight:700,fontSize:15}}>{g.categoria}</div>
+                <div style={{fontWeight:700,color:"var(--primary-dark)",whiteSpace:"nowrap"}}>{money(g.monto)}</div>
+              </div>
+              <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:2}}>{g.fecha} · {g.metodo_pago}{g.descripcion?` · ${g.descripcion}`:""}</div>
+              <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarGasto(g.id)}>🗑 Borrar</button>
+            </div>
+          ))}
+        </div>}
+      </div>
       {meses.length>0&&<div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:12}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>RESUMEN MENSUAL</div>
@@ -1141,8 +1297,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
-          <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(   
+     <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{fontWeight:700,fontSize:16}}>{cAbierto?"▾":"▸"} Caja del {c.fecha}</div>
@@ -1176,6 +1332,174 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,reload}){
             </div>}
           </div>
         );})}
+      </div>
+    </div>
+  );
+}
+
+function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas,cierres}){
+  const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
+  const UMBRAL_AUMENTO_COSTO=config?.umbral_aumento_costo??15;
+  const[analisis,setAnalisis]=useState(null);
+  const[analisisLoading,setAnalisisLoading]=useState(false);
+  const costoItem=item=>costoProducto(item,recetas,insumos);
+  const precioAnteriorInsumo=insumoId=>{
+    const hist=compras.filter(c=>c.insumo_id===insumoId).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    return hist.length>=2?Number(hist[1].precio_unitario):null;
+  };
+  const insumosPrecioAnterior=insumos.map(ins=>{const pa=precioAnteriorInsumo(ins.id);return pa!=null?{...ins,precio_compra:pa}:ins;});
+  const productosCostoSubio=menu.filter(m=>!m.archivado).map(m=>{
+    const costoActual=costoProducto(m,recetas,insumos);
+    const costoAnterior=costoProducto(m,recetas,insumosPrecioAnterior);
+    const pct=costoAnterior>0?Math.round(((costoActual-costoAnterior)/costoAnterior)*100):0;
+    return{...m,costoActual,costoAnterior,pct};
+  }).filter(m=>m.costoAnterior>0&&m.pct>=UMBRAL_AUMENTO_COSTO).sort((a,b)=>b.pct-a.pct);
+  const itemsHoy=items.filter(i=>i.created_at&&i.created_at.slice(0,10)===hoy());
+  const ventasHoy=itemsHoy.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+  const costoMercaderiaHoy=itemsHoy.reduce((s,i)=>{const mi=menu.find(m=>m.id===i.menu_item_id);return s+(mi?costoItem(mi)*i.cantidad:0);},0);
+  const gastosHoy=gastos.filter(g=>g.fecha===hoy()).reduce((s,g)=>s+Number(g.monto),0);
+  const gananciaHoy=ventasHoy-costoMercaderiaHoy-gastosHoy;
+  const margenPctHoy=ventasHoy>0?Math.round((gananciaHoy/ventasHoy)*100):0;
+  const tabla=menu.filter(m=>!m.archivado).map(m=>{
+    const costo=costoItem(m);
+    const margen=m.precio-costo;
+    const pct=m.precio>0?Math.round((margen/m.precio)*100):0;
+    return{...m,costo,margen,pct};
+  }).sort((a,b)=>b.margen-a.margen);
+  const conVentaHoy=new Set(itemsHoy.map(i=>i.menu_item_id));
+  const masRentables=tabla.filter(m=>m.precio>0).slice(0,5);
+  const menosRentables=[...tabla].filter(m=>m.precio>0).sort((a,b)=>a.margen-b.margen).slice(0,5);
+  const margenBajo=tabla.filter(m=>m.precio>0&&m.pct<UMBRAL_MARGEN_BAJO);
+  const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
+  const generarAnalisis=async()=>{
+    setAnalisisLoading(true);setAnalisis(null);
+    const cierreHoy=cierres.find(c=>c.fecha===hoy());
+    const mesasAtendidasReal=cierreHoy?cierreHoy.cantidad_mesas:mesas.filter(m=>m.estado==="ocupada").length;
+    const productosVendidos=tabla.filter(m=>conVentaHoy.has(m.id)).map(m=>{
+      const cant=itemsHoy.filter(i=>i.menu_item_id===m.id).reduce((s,i)=>s+i.cantidad,0);
+      return{nombre:m.nombre,cantidad:cant,venta:cant*Number(m.precio),costo:Math.round(cant*m.costo)};
+    }).sort((a,b)=>b.venta-a.venta);
+    const comprasNecesarias=stockBajo.map(i=>({nombre:i.nombre,faltante:Math.max(i.stock_minimo-i.stock_actual,0),unidad:i.unidad}));
+    try{
+      const res=await fetch(`${SUPABASE_URL}/functions/v1/resumen-diario`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
+        body:JSON.stringify({
+          totalHoy:ventasHoy,mesasAtendidas:mesasAtendidasReal,productosVendidos,
+          costoTotal:Math.round(costoMercaderiaHoy),margen:Math.round(gananciaHoy),comprasNecesarias,
+          productosMargenBajo:margenBajo.map(m=>({nombre:m.nombre,margenPct:m.pct})),
+          productosCostoSubio:productosCostoSubio.map(m=>({nombre:m.nombre,subioPct:m.pct})),
+        }),
+      });
+      const d=await res.json();
+      setAnalisis(d.resumen||"No se pudo generar el análisis.");
+    }catch(e){setAnalisis("Error de conexión al generar el análisis.");}
+    finally{setAnalisisLoading(false);}
+  };
+  return(
+    <div>
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📊 Acá ves cómo le está yendo al negocio: cuánto vendiste, cuánto te costó lo que vendiste, cuánto gastaste, y qué productos conviene empujar o revisar.</span>
+        <button className="bp" style={{whiteSpace:"nowrap"}} onClick={generarAnalisis} disabled={analisisLoading}>{analisisLoading?"Analizando…":"✨ Análisis con IA"}</button>
+      </div>
+      {analisis&&<div className="card" style={{padding:18,marginBottom:16,background:"var(--accent-tint)",border:"1px solid var(--accent)",whiteSpace:"pre-wrap",fontSize:14.5,lineHeight:1.55}}>{analisis}</div>}
+      <div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HOY</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:16}}>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENTAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary-dark)"}}>{money(ventasHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>COSTO MERCADERÍA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(costoMercaderiaHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GASTOS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(gastosHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA ESTIMADA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:gananciaHoy<0?"var(--warn)":"var(--accent)"}}>{money(gananciaHoy)}{ventasHoy>0&&<span style={{fontSize:14,fontWeight:600,color:"var(--ink-soft)"}}> ({margenPctHoy}%)</span>}</div></div>
+        </div>
+      </div>
+      {margenBajo.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos con margen menor a {UMBRAL_MARGEN_BAJO}%</div>
+        {margenBajo.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — margen {m.pct}% ({money(m.margen)})</div>)}
+      </div>}
+      {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>📈 Productos cuyo costo subió</div>
+        {productosCostoSubio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — costo {money(m.costoAnterior)} → {money(m.costoActual)} <span style={{fontWeight:700}}>(+{m.pct}%)</span></div>)}
+      </div>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:22}}>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:18,fontWeight:800,color:"var(--accent)",marginBottom:10}}>🏆 MÁS RENTABLES</div>
+          {!masRentables.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Todavía no hay productos con precio cargado.</div>}
+          {masRentables.map((m,idx)=>(
+            <div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderTop:idx>0?"1px solid var(--line)":"none",fontSize:14.5}}>
+              <span>{m.nombre}</span>
+              <span style={{fontWeight:700,color:"var(--accent)"}}>{money(m.margen)} ({m.pct}%)</span>
+            </div>
+          ))}
+        </div>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:18,fontWeight:800,color:"var(--primary)",marginBottom:10}}>📉 MENOS RENTABLES</div>
+          {!menosRentables.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Todavía no hay productos con precio cargado.</div>}
+          {menosRentables.map((m,idx)=>(
+            <div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderTop:idx>0?"1px solid var(--line)":"none",fontSize:14.5}}>
+              <span>{m.nombre}</span>
+              <span style={{fontWeight:700,color:m.margen<0?"var(--warn)":"var(--primary)"}}>{money(m.margen)} ({m.pct}%)</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>RENTABILIDAD POR PRODUCTO</div>
+      {!tabla.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste productos en el Menú.</div>}
+      {tabla.length>0&&<div className="card" style={{padding:0,overflowX:"auto"}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
+          <thead>
+            <tr style={{borderBottom:"2px solid var(--line)"}}>
+              <th style={{textAlign:"left",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Producto</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Costo</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Precio</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Margen</th>
+              <th style={{textAlign:"right",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Margen %</th>
+              <th style={{textAlign:"center",padding:"10px 14px",color:"var(--ink-soft)",fontSize:13}}>Vendido hoy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tabla.map(m=>(
+              <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
+                <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.pct<UMBRAL_MARGEN_BAJO?"var(--warn)":"var(--ink)"}}>{m.pct}%</td>
+                <td style={{padding:"9px 14px",textAlign:"center"}}>{conVentaHoy.has(m.id)?"✅":"—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>}
+    </div>
+  );
+}
+
+function PanelConfiguracion({userId,config,reload}){
+  const[form,setForm]=useState({umbral_aumento_costo:String(config?.umbral_aumento_costo??15),umbral_margen_bajo:String(config?.umbral_margen_bajo??25)});
+  const[guardado,setGuardado]=useState(false);
+  const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
+  const guardar=async()=>{
+    await sb.from("configuracion").upsert({user_id:userId,umbral_aumento_costo:Number(form.umbral_aumento_costo)||15,umbral_margen_bajo:Number(form.umbral_margen_bajo)||25,updated_at:new Date().toISOString()});
+    setGuardado(true);setTimeout(()=>setGuardado(false),2500);reload();
+  };
+  return(
+    <div>
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>⚙️ Acá ajustás los números que la app usa para avisarte de cosas automáticamente.</span>
+      </div>
+      <div className="card" style={{padding:18,maxWidth:420}}>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de aumento de costo</label>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Se usa en Compras (al pagar más caro un insumo) y en Resultados (productos cuyo costo subió).</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><input className="field" style={{width:90}} value={form.umbral_aumento_costo} onChange={e=>setForm({...form,umbral_aumento_costo:num(e.target.value)})}/><span style={{fontSize:15}}>% o más</span></div>
+        </div>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de margen bajo</label>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Se usa en Resultados, para marcar productos cuyo margen de ganancia es chico.</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}><input className="field" style={{width:90}} value={form.umbral_margen_bajo} onChange={e=>setForm({...form,umbral_margen_bajo:num(e.target.value)})}/><span style={{fontSize:15}}>% o menos</span></div>
+        </div>   
+          <button className="bp" onClick={guardar}>Guardar</button>
+        {guardado&&<span style={{marginLeft:12,color:"var(--accent)",fontWeight:700,fontSize:14.5}}>✓ Guardado</span>}
       </div>
     </div>
   );
