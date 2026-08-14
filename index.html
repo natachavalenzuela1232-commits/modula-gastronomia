@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     setAcl("");
     if(nuevo){
       await descontarStock(mi.id);
-      setUltimoAgregado(nuevo);
+        setUltimoAgregado(nuevo);
       setTimeout(()=>setUltimoAgregado(u=>u?.id===nuevo.id?null:u),5000);
     }
     reload();
@@ -497,8 +497,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
-  const[resumenLoading,setResumenLoading]=useState(false);                
-    const costoItemVD=item=>costoProducto(item,recetas,insumos);
+  const[resumenLoading,setResumenLoading]=useState(false);
+  const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const generarResumen=async()=>{
     setResumenLoading(true);setResumen(null);
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
@@ -697,7 +697,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
       return;
     }
-    reload();                  
+    reload();
     };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
@@ -898,7 +898,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             const subioMucho=huboPrecioAntes&&pctCambio>=UMBRAL_AUMENTO;
             const afectados=subioMucho?productosAfectados(insumoSel.id):[];
             return(
-              <div>
+             <div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
               <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
                 <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
@@ -979,9 +979,11 @@ function PanelStock({userId,insumos,reload}){
   };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
-  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),precio_compra:String(i.precio_compra)});};
+  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
   const guardarEdicion=async()=>{
-    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:Number(editForm.precio_compra)||0}).eq("id",editId);
+    const contenido=Number(editForm.contenidoPaquete)||1;
+    const precioNuevo=(Number(editForm.precioPaquete)||0)/contenido;
+    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:precioNuevo}).eq("id",editId);
     setEditId(null);reload();
   };
   const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
@@ -1010,7 +1012,15 @@ function PanelStock({userId,insumos,reload}){
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label><select className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}><option value="">Elegir…</option><option value="unidad">unidad</option><option value="kg">kg</option><option value="gramos">gramos</option><option value="litro">litro</option><option value="mililitros">mililitros</option><option value="paquete">paquete</option><option value="botella">botella</option><option value="caja">caja</option><option value="docena">docena</option></select><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cómo contás de a 1. Ej: si comprás huevos en bandeja de 12, elegí "unidad" (el huevo), no "bandeja".</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, contado en esa unidad.</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio por 1 {editForm.unidad||"unidad"}</label><input className="field" inputMode="decimal" value={editForm.precio_compra} onChange={e=>setEditForm({...editForm,precio_compra:num(e.target.value)})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>usá punto para centavos, ej: 416.67</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
+              <div style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:6}}>Esto se actualiza solo cada vez que registrás una compra en 🛒 Compras. Usalo acá solo si necesitás corregirlo a mano.</div>
+              <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Contiene</label><input className="field" style={{width:90}} inputMode="decimal" value={editForm.contenidoPaquete} onChange={e=>setEditForm({...editForm,contenidoPaquete:num(e.target.value)})}/></div>
+                <div style={{fontSize:14,paddingBottom:9}}>{editForm.unidad||"unidad"} por</div>
+                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><input className="field" style={{width:110}} inputMode="decimal" value={editForm.precioPaquete} onChange={e=>setEditForm({...editForm,precioPaquete:num(e.target.value)})}/></div>
+              </div>
+              <div style={{fontSize:14,fontWeight:700,color:"var(--accent)",marginTop:6}}>= {money((Number(editForm.precioPaquete)||0)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad||"unidad"}</div>
+            </div>
             <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
           </div>
         ):(
@@ -1087,7 +1097,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
     const tar=cierresMes.reduce((s,c)=>s+Number(c.total_tarjeta),0);
     const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
     const mesasCant=cierresMes.reduce((s,c)=>s+Number(c.cantidad_mesas),0);
-    const cierreIds=cierresMes.map(c=>c.id);
+    const cierreIds=cierresMes.map(c=>c.id); 
     const{data:peds}=await sb.from("pedidos").select("*").in("cierre_id",cierreIds);
     let costoTotal=0;
     if(peds&&peds.length){
@@ -1097,7 +1107,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         const mi=menu.find(m=>m.id===i.menu_item_id);
         if(mi)costoTotal+=costoItemVD(mi)*i.cantidad;
       });
-       }
+    }
     setResumenMes({totalVendido,ef,tar,tr,mesas:mesasCant,costoTotal:Math.round(costoTotal),margen:Math.round(totalVendido-costoTotal),dias:cierresMes.length});
     setCargandoMes(false);
   };
@@ -1288,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <option value="tarjeta">Tarjeta</option>
               <option value="transferencia">Transferencia</option>
             </select>
-            {abiertoAqui&&<div style={{background:"var(--surface-2)",borderRadius:8,padding:"8px 12px"}}>
+             {abiertoAqui&&<div style={{background:"var(--surface-2)",borderRadius:8,padding:"8px 12px"}}>
               {itemsP.map(i2=>(
                 <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:15,padding:"3px 0"}}>
                   <span>{i2.nombre}{i2.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i2.aclaracion}</span>}</span>
@@ -1298,7 +1308,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               {!itemsP.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Sin items cargados.</div>}
             </div>}
           </div>
-     );})}
+        );})}
       </div>}
       {pedidos.length>0&&(
         <div className="card" style={{padding:18,marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
@@ -1488,7 +1498,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
 
 function PanelConfiguracion({userId,config,reload}){
   const[form,setForm]=useState({umbral_aumento_costo:String(config?.umbral_aumento_costo??15),umbral_margen_bajo:String(config?.umbral_margen_bajo??25)});
-  const[guardado,setGuardado]=useState(false);
+   const[guardado,setGuardado]=useState(false);
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
   const guardar=async()=>{
     await sb.from("configuracion").upsert({user_id:userId,umbral_aumento_costo:Number(form.umbral_aumento_costo)||15,umbral_margen_bajo:Number(form.umbral_margen_bajo)||25,updated_at:new Date().toISOString()});
@@ -1498,7 +1508,7 @@ function PanelConfiguracion({userId,config,reload}){
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>⚙️ Acá ajustás los números que la app usa para avisarte de cosas automáticamente.</span>
-        </div>
+      </div>
       <div className="card" style={{padding:18,maxWidth:420}}>
         <div style={{marginBottom:16}}>
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de aumento de costo</label>
