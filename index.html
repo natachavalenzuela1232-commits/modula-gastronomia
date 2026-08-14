@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedActual.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
     setAcl("");
     if(nuevo){
-      await descontarStock(mi.id);  
-     setUltimoAgregado(nuevo);
+      await descontarStock(mi.id); 
+   setUltimoAgregado(nuevo);
       setTimeout(()=>setUltimoAgregado(u=>u?.id===nuevo.id?null:u),5000);
     }
     reload();
@@ -491,14 +491,14 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
 
 // ---- VISTA DUEÑO ----
 function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){
-  const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"mesas");
+  const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"inicio");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
-  const NAV=[{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
+  const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
-  const[resumenLoading,setResumenLoading]=useState(false); 
-    const costoItemVD=item=>costoProducto(item,recetas,insumos);
+  const[resumenLoading,setResumenLoading]=useState(false);               
+  const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const generarResumen=async()=>{
     setResumenLoading(true);setResumen(null);
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
@@ -557,6 +557,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
           <div style={{marginLeft:"auto",alignSelf:"center"}}><button className="bp" onClick={generarResumen} disabled={resumenLoading}>{resumenLoading?"Generando…":"✨ Resumen del día"}</button></div>
         </div>
         {resumen&&<div className="card" style={{padding:18,marginBottom:22,lineHeight:1.6,fontSize:14.5}}>{resumen}</div>}
+        {tab==="inicio"&&<PanelInicio identidad={identidad} mesas={mesas} items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} config={config} cierres={cierres} irA={setTab}/>}
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
@@ -696,9 +697,9 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
       return;
     }
-    reload();
-  };
-   const[editId,setEditId]=useState(null);
+    reload();                      
+    };
+  const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
   const abrirEdicion=m=>{setEditId(m.id);setEditForm({nombre:m.nombre,categoria:m.categoria,precio:String(m.precio),usaReceta:m.usa_receta!==false,costoManual:m.costo_manual!=null?String(m.costo_manual):"",margenObjetivo:m.margen_objetivo!=null?String(m.margen_objetivo):""});};
   const guardarEdicion=async()=>{await sb.from("menu_items").update({nombre:editForm.nombre,categoria:editForm.categoria,precio:Number(editForm.precio)||0,usa_receta:editForm.usaReceta,costo_manual:editForm.usaReceta?null:(Number(editForm.costoManual)||0),margen_objetivo:editForm.margenObjetivo?Number(editForm.margenObjetivo):null}).eq("id",editId);setEditId(null);reload();};
@@ -893,7 +894,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
                 <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
                 <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por cada {insumoSel?.unidad}</div>
                 {huboPrecioAntes&&<div style={{fontSize:14,color:"var(--ink-soft)",marginTop:6}}>Antes pagabas {money(precioAnterior)} por {insumoSel?.unidad} {pctCambio!==0&&<span style={{fontWeight:700,color:pctCambio>0?"var(--warn)":"var(--accent)"}}>({pctCambio>0?"+":""}{pctCambio}%)</span>}</div>}
-            </div>
+        </div>
               {subioMucho&&<div className="card" style={{padding:16,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
                 <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ El precio subió {pctCambio}% respecto a la última compra</div>
                 {afectados.length>0?(
@@ -1096,8 +1097,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
     if(detalleCierre[c.id])return;
     const{data:peds}=await sb.from("pedidos").select("*").eq("cierre_id",c.id);
     if(!peds||!peds.length){setDetalleCierre(prev=>({...prev,[c.id]:[]}));return;}
-    const ids=peds.map(p=>p.id);
-    const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);  
+    const ids=peds.map(p=>p.id);   
+     const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);
     const conItems=peds.map(p=>({...p,itemsP:(its||[]).filter(i=>i.pedido_id===p.id)}));
     setDetalleCierre(prev=>({...prev,[c.id]:conItems}));
   };
@@ -1297,8 +1298,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(   
-     <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+         {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
+          <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{fontWeight:700,fontSize:16}}>{cAbierto?"▾":"▸"} Caja del {c.fecha}</div>
@@ -1497,9 +1498,63 @@ function PanelConfiguracion({userId,config,reload}){
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de margen bajo</label>
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Se usa en Resultados, para marcar productos cuyo margen de ganancia es chico.</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}><input className="field" style={{width:90}} value={form.umbral_margen_bajo} onChange={e=>setForm({...form,umbral_margen_bajo:num(e.target.value)})}/><span style={{fontSize:15}}>% o menos</span></div>
-        </div>   
-          <button className="bp" onClick={guardar}>Guardar</button>
+           </div>
+        <button className="bp" onClick={guardar}>Guardar</button>
         {guardado&&<span style={{marginLeft:12,color:"var(--accent)",fontWeight:700,fontSize:14.5}}>✓ Guardado</span>}
+      </div>
+    </div>
+  );
+}
+
+function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,cierres,irA}){
+  const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
+  const itemsHoy=items.filter(i=>i.created_at&&i.created_at.slice(0,10)===hoy());
+  const ventasHoy=itemsHoy.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+  const costoMercaderiaHoy=itemsHoy.reduce((s,i)=>{const mi=menu.find(m=>m.id===i.menu_item_id);return s+(mi?costoProducto(mi,recetas,insumos)*i.cantidad:0);},0);
+  const gastosHoy=gastos.filter(g=>g.fecha===hoy()).reduce((s,g)=>s+Number(g.monto),0);
+  const gananciaHoy=ventasHoy-costoMercaderiaHoy-gastosHoy;
+  const mesasOcupadas=mesas.filter(m=>m.estado==="ocupada").length;
+  const cierreHoy=cierres.find(c=>c.fecha===hoy());
+  const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
+  const margenBajo=menu.filter(m=>!m.archivado&&m.precio>0).map(m=>{
+    const costo=costoProducto(m,recetas,insumos);
+    const pct=Math.round(((m.precio-costo)/m.precio)*100);
+    return{...m,pct};
+  }).filter(m=>m.pct<UMBRAL_MARGEN_BAJO);
+  const saludo=identidad?.nombre?`Hola, ${identidad.nombre}`:"Hola";
+  const fechaLarga=new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+  return(
+    <div>
+      <div style={{marginBottom:20}}>
+        <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700}}>{saludo} 👋</div>
+        <div style={{fontSize:15,color:"var(--ink-soft)",textTransform:"capitalize"}}>{fechaLarga}</div>
+      </div>
+      <div className="card" style={{padding:18,marginBottom:20}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:16}}>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENTAS HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)"}}>{money(ventasHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA ESTIMADA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:gananciaHoy<0?"var(--warn)":"var(--accent)"}}>{money(gananciaHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700}}>{mesasOcupadas}</div></div>
+        </div>
+        {!cierreHoy&&<div style={{fontSize:13,color:"var(--ink-soft)",marginTop:10}}>Todavía no cerraste la caja de hoy.</div>}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16,marginBottom:20}}>
+        <div className="card" style={{padding:18,cursor:"pointer"}} onClick={()=>irA("stock")}>
+          <div style={{fontSize:16,fontWeight:800,color:stockBajo.length?"var(--warn)":"var(--ink-soft)",marginBottom:8}}>📦 Stock bajo mínimo{stockBajo.length>0?` (${stockBajo.length})`:""}</div>
+          {!stockBajo.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Todo el stock está en orden.</div>}
+          {stockBajo.slice(0,4).map(i=><div key={i.id} style={{fontSize:14,padding:"2px 0"}}>• {i.nombre}</div>)}
+          {stockBajo.length>4&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>+{stockBajo.length-4} más — ver Stock</div>}
+        </div>
+        <div className="card" style={{padding:18,cursor:"pointer"}} onClick={()=>irA("resultados")}>
+          <div style={{fontSize:16,fontWeight:800,color:margenBajo.length?"var(--warn)":"var(--ink-soft)",marginBottom:8}}>📊 Márgenes bajos{margenBajo.length>0?` (${margenBajo.length})`:""}</div>
+          {!margenBajo.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Ningún producto tiene margen bajo.</div>}
+          {margenBajo.slice(0,4).map(m=><div key={m.id} style={{fontSize:14,padding:"2px 0"}}>• {m.nombre} ({m.pct}%)</div>)}
+          {margenBajo.length>4&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>+{margenBajo.length-4} más — ver Resultados</div>}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <button className="bg" onClick={()=>irA("mesas")}>🍽️ Ir a Mesas</button>
+        <button className="bg" onClick={()=>irA("caja")}>💰 Ir a Caja</button>
+        <button className="bg" onClick={()=>irA("resultados")}>📊 Ver Resultados</button>
       </div>
     </div>
   );
