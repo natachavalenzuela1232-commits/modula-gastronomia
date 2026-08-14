@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedActual.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
     setAcl("");
     if(nuevo){
-      await descontarStock(mi.id); 
-   setUltimoAgregado(nuevo);
+      await descontarStock(mi.id);
+      setUltimoAgregado(nuevo);
       setTimeout(()=>setUltimoAgregado(u=>u?.id===nuevo.id?null:u),5000);
     }
     reload();
@@ -497,8 +497,8 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
-  const[resumenLoading,setResumenLoading]=useState(false);               
-  const costoItemVD=item=>costoProducto(item,recetas,insumos);
+  const[resumenLoading,setResumenLoading]=useState(false);                
+    const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const generarResumen=async()=>{
     setResumenLoading(true);setResumen(null);
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
@@ -697,7 +697,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
       alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
       return;
     }
-    reload();                      
+    reload();                  
     };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
@@ -837,6 +837,16 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     await sb.from("compras").insert({user_id:userId,insumo_id:compra.insumo_id,cantidad:cant,precio_unitario:precio});
     setCompra({insumo_id:"",cantidad:"",precio_total:""});setOpenC(false);reload();
   };
+  const borrarCompra=async c=>{
+    const nombreIns=insumos.find(i=>i.id===c.insumo_id)?.nombre||"este insumo";
+    if(!confirm(`¿Borrar esta compra de ${nombreIns}? Se le va a restar del stock y se va a recalcular el precio.`))return;
+    await sb.rpc("ajustar_stock",{p_insumo_id:c.insumo_id,p_delta:-Number(c.cantidad)});
+    await sb.from("compras").delete().eq("id",c.id);
+    const restantes=compras.filter(x=>x.id!==c.id&&x.insumo_id===c.insumo_id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    const nuevoPrecio=restantes.length?Number(restantes[0].precio_unitario):0;
+    await sb.from("insumos").update({precio_compra:nuevoPrecio}).eq("id",c.insumo_id);
+    reload();
+  };
   return(
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
@@ -888,13 +898,13 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             const subioMucho=huboPrecioAntes&&pctCambio>=UMBRAL_AUMENTO;
             const afectados=subioMucho?productosAfectados(insumoSel.id):[];
             return(
-            <div>
+              <div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
               <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
                 <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {cantCompra} {insumoSel?.unidad} · {money(totalCompra)} en total</div>
                 <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por cada {insumoSel?.unidad}</div>
                 {huboPrecioAntes&&<div style={{fontSize:14,color:"var(--ink-soft)",marginTop:6}}>Antes pagabas {money(precioAnterior)} por {insumoSel?.unidad} {pctCambio!==0&&<span style={{fontWeight:700,color:pctCambio>0?"var(--warn)":"var(--accent)"}}>({pctCambio>0?"+":""}{pctCambio}%)</span>}</div>}
-        </div>
+              </div>
               {subioMucho&&<div className="card" style={{padding:16,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
                 <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ El precio subió {pctCambio}% respecto a la última compra</div>
                 {afectados.length>0?(
@@ -922,6 +932,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
               <div style={{fontWeight:700,color:"var(--primary-dark)",whiteSpace:"nowrap"}}>{money(c.cantidad*c.precio_unitario)}</div>
             </div>
             <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:2}}>{c.fecha} · {c.cantidad} {ins?.unidad||""}</div>
+            <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarCompra(c)}>🗑 Borrar</button>
           </div>
         );})}
       </div>
@@ -1086,7 +1097,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         const mi=menu.find(m=>m.id===i.menu_item_id);
         if(mi)costoTotal+=costoItemVD(mi)*i.cantidad;
       });
-    }
+       }
     setResumenMes({totalVendido,ef,tar,tr,mesas:mesasCant,costoTotal:Math.round(costoTotal),margen:Math.round(totalVendido-costoTotal),dias:cierresMes.length});
     setCargandoMes(false);
   };
@@ -1097,8 +1108,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
     if(detalleCierre[c.id])return;
     const{data:peds}=await sb.from("pedidos").select("*").eq("cierre_id",c.id);
     if(!peds||!peds.length){setDetalleCierre(prev=>({...prev,[c.id]:[]}));return;}
-    const ids=peds.map(p=>p.id);   
-     const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);
+    const ids=peds.map(p=>p.id);
+    const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",ids);
     const conItems=peds.map(p=>({...p,itemsP:(its||[]).filter(i=>i.pedido_id===p.id)}));
     setDetalleCierre(prev=>({...prev,[c.id]:conItems}));
   };
@@ -1287,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               {!itemsP.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>Sin items cargados.</div>}
             </div>}
           </div>
-        );})}
+     );})}
       </div>}
       {pedidos.length>0&&(
         <div className="card" style={{padding:18,marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
@@ -1298,7 +1309,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-         {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
+        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
           <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
@@ -1487,7 +1498,7 @@ function PanelConfiguracion({userId,config,reload}){
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>⚙️ Acá ajustás los números que la app usa para avisarte de cosas automáticamente.</span>
-      </div>
+        </div>
       <div className="card" style={{padding:18,maxWidth:420}}>
         <div style={{marginBottom:16}}>
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de aumento de costo</label>
@@ -1498,7 +1509,7 @@ function PanelConfiguracion({userId,config,reload}){
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de margen bajo</label>
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Se usa en Resultados, para marcar productos cuyo margen de ganancia es chico.</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}><input className="field" style={{width:90}} value={form.umbral_margen_bajo} onChange={e=>setForm({...form,umbral_margen_bajo:num(e.target.value)})}/><span style={{fontSize:15}}>% o menos</span></div>
-           </div>
+        </div>
         <button className="bp" onClick={guardar}>Guardar</button>
         {guardado&&<span style={{marginLeft:12,color:"var(--accent)",fontWeight:700,fontSize:14.5}}>✓ Guardado</span>}
       </div>
