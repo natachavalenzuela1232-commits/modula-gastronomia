@@ -1,4 +1,4 @@
-      <!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -229,7 +229,7 @@ function ChatHilo({itemId,mensajes,autor,userId,reload}){
   const enviar=async()=>{
     if(!texto.trim())return;
     const t=texto.trim();setTexto("");
-    await sb.from("mensajes_pedido").insert({pedido_item_id:itemId,autor,texto:t});
+    await sb.from("mensajes_pedido").insert({pedido_item_id:itemId,autor,texto:t,user_id:userId});
     reload();
   };
   return(
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     if(!mesaSel)return;
     let pedActual=pedSel;
     if(!pedActual){
-      await sb.from("mesas").update({estado:"ocupada",mozo_id:identidad.id,mozo_nombre:identidad.nombre}).eq("id",mesaSel.id);                        
-    const{data:nuevoPed}=await sb.from("pedidos").insert({user_id:userId,mesa_id:mesaSel.id,mesa_numero:mesaSel.numero,mozo_id:identidad.id,mozo_nombre:identidad.nombre,estado:"abierta"}).select().single();
+      await sb.from("mesas").update({estado:"ocupada",mozo_id:identidad.id,mozo_nombre:identidad.nombre}).eq("id",mesaSel.id);    
+     const{data:nuevoPed}=await sb.from("pedidos").insert({user_id:userId,mesa_id:mesaSel.id,mesa_numero:mesaSel.numero,mozo_id:identidad.id,mozo_nombre:identidad.nombre,estado:"abierta"}).select().single();
       pedActual=nuevoPed;
     }
     const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedActual.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
@@ -497,7 +497,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
 }
 
 // ---- VISTA DUEÑO ----
-function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){
+function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){      
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"inicio");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
@@ -697,7 +697,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
   const[verArchivados,setVerArchivados]=useState(false);
   const del=async id=>{
-    if(!confirm("¿Eliminar este ítem?"))return;   
+    if(!confirm("¿Eliminar este ítem?"))return;     
     await sb.from("recetas").delete().eq("menu_item_id",id);
     const{error}=await sb.from("menu_items").delete().eq("id",id);
     if(error){
@@ -889,7 +889,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             </div>
             {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidad(cantCompra,insumoSel?.unidad)} en total</div>}
             <div style={{display:"flex",gap:10,marginTop:16}}>
-                <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
+               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
               <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!cantCompra} onClick={()=>setPasoCompra(2)}>Siguiente →</button>
             </div>
           </div>}
@@ -954,7 +954,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
       {compras.length>0&&(()=>{
         const porDia={};
         compras.forEach(c=>{porDia[c.fecha]=(porDia[c.fecha]||0)+c.cantidad*c.precio_unitario;});
-        const dias=Object.entries(porDia).sort((a,b)=>b[0]<a[0]?1:-1);
+        const dias=Object.entries(porDia).sort((a,b)=>a[0]<b[0]?1:-1);
         return(
           <div style={{marginTop:22}}>
             <div style={{fontSize:18,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>TOTAL GASTADO POR DÍA</div>
@@ -1097,7 +1097,7 @@ function PanelStock({userId,insumos,reload}){
         ):(
           <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-        <div><div style={{fontWeight:700,fontSize:16}}>{i.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>{money(i.precio_compra)} por {i.unidad==="gramos"?"gramo":i.unidad==="mililitros"?"ml":"unidad"}{i.presentacion&&i.contenido_presentacion?` · ${i.presentacion} de ${formatCantidad(i.contenido_presentacion,i.unidad)}`:""}</div></div>
+              <div><div style={{fontWeight:700,fontSize:16}}>{i.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>{money(i.precio_compra)} por {i.unidad==="gramos"?"gramo":i.unidad==="mililitros"?"ml":"unidad"}{i.presentacion&&i.contenido_presentacion?` · ${i.presentacion} de ${formatCantidad(i.contenido_presentacion,i.unidad)}`:""}</div></div>
               <span className="tag" style={{background:i.stock_actual<0?"#F8D7DA":i.stock_actual<=i.stock_minimo?"var(--warn-tint)":"var(--accent-tint)",color:i.stock_actual<0?"#8B1E2B":i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--accent)",whiteSpace:"nowrap"}}>{i.stock_actual<0?"⚠ Stock NEGATIVO":i.stock_actual<=i.stock_minimo?"Stock bajo":"OK"}</span>
             </div>
             <div style={{fontWeight:800,fontSize:20,fontFamily:"'Fraunces',serif",color:i.stock_actual<0?"#8B1E2B":i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{formatCantidad(i.stock_actual,i.unidad)} disponibles<span style={{fontSize:13.5,fontWeight:600,color:"var(--ink-soft)",fontFamily:"'Manrope',sans-serif"}}> · mín: {formatCantidad(i.stock_minimo,i.unidad)}</span></div>
@@ -1297,8 +1297,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>GASTOS OPERATIVOS</div>
           <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenGasto(!openGasto)}>➕ Nuevo gasto</button>
         </div>
-        {openGasto&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
-       <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label>
+        {openGasto&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>         
+<div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label>
             <select className="field" value={gastoForm.categoria} onChange={e=>setGastoForm({...gastoForm,categoria:e.target.value})}>
               {CATEGORIAS_GASTO.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
@@ -1498,7 +1498,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
       {analisis&&<div className="card" style={{padding:18,marginBottom:16,background:"var(--accent-tint)",border:"1px solid var(--accent)",whiteSpace:"pre-wrap",fontSize:14.5,lineHeight:1.55}}>{analisis}</div>}
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HOY</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:16}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:16}}>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENTAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary-dark)"}}>{money(ventasHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>COSTO MERCADERÍA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(costoMercaderiaHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GASTOS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(gastosHoy)}</div></div>
@@ -1655,4 +1655,4 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>    
+</html>
