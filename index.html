@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+       <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -83,6 +83,22 @@ const formatCantidad=(valor,unidad)=>{
   const etiqueta=unidad==="gramos"?"g":unidad==="mililitros"?"ml":(unidad||"unidad");
   return`${v.toLocaleString("es-AR",{maximumFractionDigits:1})} ${etiqueta}`;
 };
+function CampoMonto({value,onChange,placeholder,style,autoFocus}){
+  const formatearVisible=v=>{
+    if(v===""||v==null)return"";
+    const n=Number(v);
+    if(isNaN(n))return"";
+    const[,dec]=String(v).split(".");
+    return n.toLocaleString("es-AR",{minimumFractionDigits:dec?Math.min(dec.length,2):0,maximumFractionDigits:2});
+  };
+  const manejarCambio=e=>{
+    let raw=e.target.value.replace(/\./g,"").replace(",",".").replace(/[^0-9.]/g,"");
+    const primerPunto=raw.indexOf(".");
+    if(primerPunto!==-1)raw=raw.slice(0,primerPunto+1)+raw.slice(primerPunto+1).replace(/\./g,"");
+    onChange(raw);
+  };
+  return<input className="field" inputMode="decimal" style={style} autoFocus={autoFocus} value={formatearVisible(value)} onChange={manejarCambio} placeholder={placeholder}/>;
+}
 
 function Login(){
   const[mode,setMode]=useState("signin");
@@ -281,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
     else localStorage.removeItem("modula_mesa");
-  },[mesaId]);
-  useEffect(()=>{
+  },[mesaId]);     
+   useEffect(()=>{
     if(mesaId&&mesas.length){
       const m=mesas.find(mm=>mm.id===mesaId);
       if(!m||m.estado!=="ocupada"||m.mozo_id!==identidad.id)setMesaId(null);
@@ -298,7 +314,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     for(const r of recs){
       await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:-Number(r.cantidad)});
     }
-     };
+  };
   const restaurarStock=async menuItemId=>{
     const recs=recetas.filter(r=>r.menu_item_id===menuItemId);
     for(const r of recs){
@@ -481,8 +497,8 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
-      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>
-      <div style={{padding:18}}>
+      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>     
+   <div style={{padding:18}}>
         {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
           {Object.entries(porMesa).map(([mesa,its])=>(
@@ -662,9 +678,9 @@ function PanelEmpleados({userId,empleados,reload}){
 
 function opcionesUnidad(unidadBase){
   const u=(unidadBase||"").toLowerCase();
-  if(u.startsWith("kilogramo")||u==="kg")return[{label:"Kilogramos",factor:1},{label:"Gramos",factor:0.001}];
-  if(u.startsWith("litro")||u==="l")return[{label:"Litros",factor:1},{label:"Mililitros",factor:0.001}];
-  return[{label:unidadBase||"unidad",factor:1}];
+  if(u==="gramos")return[{label:"Gramos",factor:1},{label:"Kilogramos",factor:1000}];
+  if(u==="mililitros")return[{label:"Mililitros",factor:1},{label:"Litros",factor:1000}];
+  return[{label:"unidad",factor:1}];
 }
 function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecFactor,addRec,delRec}){
   return(
@@ -681,8 +697,8 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
-          </select>
-        </div>
+          </select>                                                       
+          </div>
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
@@ -698,7 +714,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
   );
 }
 function PanelMenu({userId,menu,insumos,recetas,reload}){
-   const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});
+  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});
   const[open,setOpen]=useState(false);
   const[selItem,setSelItem]=useState(null);
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
@@ -764,11 +780,11 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
         <div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
           <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Milanesa napolitana"/></div>
           <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={form.categoria} onChange={e=>setForm({...form,categoria:e.target.value})} placeholder="Principales"/></div>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" style={{width:110}} value={form.precio} onChange={e=>setForm({...form,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
+          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><CampoMonto style={{width:110}} value={form.precio} onChange={v=>setForm({...form,precio:v})} placeholder="8500"/></div>
           <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={form.va_a_cocina} onChange={e=>setForm({...form,va_a_cocina:e.target.checked})}/> Va a la cocina</label>
           <div style={{width:"100%",borderTop:"1px solid var(--line)",paddingTop:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
             <label style={{display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:600,color:"var(--ink-soft)",paddingBottom:9}}><input type="checkbox" checked={!form.usaReceta} onChange={e=>setForm({...form,usaReceta:!e.target.checked})}/> Sin receta (cargar costo directo)</label>
-            {!form.usaReceta&&<div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><input className="field" style={{width:110}} value={form.costoManual} onChange={e=>setForm({...form,costoManual:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 900"/></div>}
+            {!form.usaReceta&&<div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><CampoMonto style={{width:110}} value={form.costoManual} onChange={v=>setForm({...form,costoManual:v})} placeholder="ej: 900"/></div>}
             <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Margen objetivo (opcional)</label><input className="field" style={{width:90}} value={form.margenObjetivo} onChange={e=>setForm({...form,margenObjetivo:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 65"/></div>
             {precioSugCreate&&<button className="bg" style={{fontSize:13.5}} onClick={()=>setForm({...form,precio:String(precioSugCreate)})}>💡 Precio sugerido: {money(precioSugCreate)} — usar</button>}
           </div>
@@ -792,9 +808,9 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   <>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label><input className="field" value={editForm.categoria} onChange={e=>setEditForm({...editForm,categoria:e.target.value})}/></div>
-                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><input className="field" value={editForm.precio} onChange={e=>setEditForm({...editForm,precio:e.target.value.replace(/\D/g,"")})} placeholder="8500"/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>solo números, sin puntos ni comas</div></div>
+                    <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio</label><CampoMonto value={editForm.precio} onChange={v=>setEditForm({...editForm,precio:v})} placeholder="8500"/></div>
                     <label style={{display:"flex",alignItems:"center",gap:6,fontSize:13.5,fontWeight:600,color:"var(--ink-soft)"}}><input type="checkbox" checked={!editForm.usaReceta} onChange={e=>setEditForm({...editForm,usaReceta:!e.target.checked})}/> Sin receta (costo directo)</label>
-                    {!editForm.usaReceta&&<div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><input className="field" value={editForm.costoManual} onChange={e=>setEditForm({...editForm,costoManual:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 900"/></div>}
+                    {!editForm.usaReceta&&<div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Costo por unidad</label><CampoMonto value={editForm.costoManual} onChange={v=>setEditForm({...editForm,costoManual:v})} placeholder="ej: 900"/></div>}
                     <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Margen objetivo % (opcional)</label><input className="field" style={{width:90}} value={editForm.margenObjetivo} onChange={e=>setEditForm({...editForm,margenObjetivo:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 65"/></div>
                     {precioSugEdit&&<button className="bg" style={{fontSize:13}} onClick={()=>setEditForm({...editForm,precio:String(precioSugEdit)})}>💡 Precio sugerido: {money(precioSugEdit)} — usar</button>}
                     <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
@@ -841,25 +857,46 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
 
 function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
-  const[compra,setCompra]=useState({insumo_id:"",cantidadPaquetes:"1",contenidoUnitario:"",precio_total:"",proveedor:""});
+  const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
+  const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoUnitario:"",contenidoValorNuevo:"",precio_total:"",proveedor:""});
   const[openC,setOpenC]=useState(false);
   const[pasoCompra,setPasoCompra]=useState(0);
-  const cantCompra=(Number(compra.cantidadPaquetes)||0)*(Number(compra.contenidoUnitario)||0);
+  const factorEntradaCompra=()=>compra.tipoMedida==="gramos"?(compra.unidadEntrada==="kg"?1000:1):compra.tipoMedida==="mililitros"?(compra.unidadEntrada==="litro"?1000:1):1;
+  const contenidoPorUnidad=compra.esNuevo?(Number(compra.contenidoValorNuevo)||0)*factorEntradaCompra():(Number(compra.contenidoUnitario)||0);
+  const cantCompra=(Number(compra.cantidadPaquetes)||0)*contenidoPorUnidad;
   const totalCompra=Number(compra.precio_total)||0;
   const precioUnitCalc=cantCompra>0?totalCompra/cantCompra:0;
   const UMBRAL_AUMENTO=config?.umbral_aumento_costo??15;
   const productosAfectados=insumoId=>menu.filter(m=>!m.archivado&&recetas.some(r=>r.menu_item_id===m.id&&r.insumo_id===insumoId));
-  const elegirInsumo=id=>{
-    const ins=insumos.find(i=>i.id===id);
-    setCompra({...compra,insumo_id:id,cantidadPaquetes:"1",contenidoUnitario:ins?.contenido_presentacion!=null?String(ins.contenido_presentacion):""});
+  const resetCompra=()=>setCompra({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoUnitario:"",contenidoValorNuevo:"",precio_total:"",proveedor:""});
+  const confirmarProducto=()=>{
+    const nombreTrim=compra.nombre.trim();
+    if(!nombreTrim)return;
+    const match=insumos.find(i=>i.nombre.trim().toLowerCase()===nombreTrim.toLowerCase());
+    if(match){
+      setCompra({...compra,nombre:match.nombre,insumo_id:match.id,esNuevo:false,cantidadPaquetes:"1",contenidoUnitario:match.contenido_presentacion!=null?String(match.contenido_presentacion):"",presentacion:match.presentacion||"Paquete"});
+    }else{
+      setCompra({...compra,insumo_id:"",esNuevo:true,cantidadPaquetes:"1",contenidoValorNuevo:""});
+    }
+    setPasoCompra(1);
   };
+  const insumoExistente=insumos.find(i=>i.id===compra.insumo_id);
+  const presentacionFinal=compra.presentacion==="Otro"?(compra.presentacionOtro.trim()||"Presentación"):compra.presentacion;
+  const insumoSel=compra.esNuevo?{id:null,nombre:compra.nombre.trim(),unidad:compra.tipoMedida,presentacion:presentacionFinal,precio_compra:0}:insumoExistente;
   const registrarCompra=async()=>{
-    if(!compra.insumo_id||!cantCompra||!(totalCompra>0))return;
+    if(!compra.nombre.trim()||!cantCompra||!(totalCompra>0))return;
     const cant=cantCompra;const precio=precioUnitCalc;
-    const ins=insumos.find(i=>i.id===compra.insumo_id);if(!ins)return;
-    await sb.from("insumos").update({stock_actual:Number(ins.stock_actual)+cant,precio_compra:precio||ins.precio_compra,contenido_presentacion:Number(compra.contenidoUnitario)||ins.contenido_presentacion}).eq("id",ins.id);
-    await sb.from("compras").insert({user_id:userId,insumo_id:compra.insumo_id,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
-    setCompra({insumo_id:"",cantidadPaquetes:"1",contenidoUnitario:"",precio_total:"",proveedor:""});setOpenC(false);reload();
+    let insumoId=compra.insumo_id;
+    if(compra.esNuevo){
+      const{data:nuevo,error}=await sb.from("insumos").insert({nombre:compra.nombre.trim(),unidad:compra.tipoMedida,presentacion:presentacionFinal,contenido_presentacion:contenidoPorUnidad||null,stock_actual:0,stock_minimo:1,precio_compra:0,user_id:userId}).select().single();
+      if(error||!nuevo)return;
+      insumoId=nuevo.id;
+    }
+    const ins=insumos.find(i=>i.id===insumoId);
+    const stockPrevio=ins?Number(ins.stock_actual):0;
+    await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:Number(compra.esNuevo?contenidoPorUnidad:compra.contenidoUnitario)||ins?.contenido_presentacion}).eq("id",insumoId);
+    await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
+    resetCompra();setOpenC(false);reload();
   };
   const borrarCompra=async c=>{
     const nombreIns=insumos.find(i=>i.id===c.insumo_id)?.nombre||"este insumo";
@@ -878,7 +915,6 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
       </div>
       <button className="bp" style={{background:"var(--accent)",marginBottom:16}} onClick={()=>{setOpenC(!openC);setPasoCompra(0);}}>📥 Registrar compra</button>
       {openC&&(()=>{
-        const insumoSel=insumos.find(i=>i.id===compra.insumo_id);
         return(
         <div className="card" style={{padding:20,marginBottom:16,borderColor:"var(--accent)"}}>
           <div style={{fontWeight:700,color:"var(--accent)",marginBottom:4}}>📥 Registrar nueva compra</div>
@@ -886,19 +922,47 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
 
           {pasoCompra===0&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué compraste?</div>
-            <select className="field" style={{fontSize:16,padding:14}} autoFocus value={compra.insumo_id} onChange={e=>elegirInsumo(e.target.value)}>
-              <option value="">Elegir insumo…</option>
-              {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
-            </select>
-            <button className="bp" style={{background:"var(--accent)",width:"100%",marginTop:16,padding:14}} disabled={!compra.insumo_id} onClick={()=>setPasoCompra(1)}>Siguiente →</button>
+            <input className="field" style={{fontSize:16,padding:14}} autoFocus list="lista-insumos" value={compra.nombre} onChange={e=>setCompra({...compra,nombre:e.target.value})} placeholder="ej: Carne molida" onKeyDown={e=>e.key==="Enter"&&confirmarProducto()}/>
+            <datalist id="lista-insumos">{insumos.map(i=><option key={i.id} value={i.nombre}/>)}</datalist>
+            <div style={{fontSize:13,color:"var(--ink-soft)",marginTop:6}}>Si ya lo comprás siempre, empezá a escribir y elegí de la lista. Si es la primera vez, escribí el nombre y listo — la app lo agrega sola.</div>
+            <button className="bp" style={{background:"var(--accent)",width:"100%",marginTop:16,padding:14}} disabled={!compra.nombre.trim()} onClick={confirmarProducto}>Siguiente →</button>
           </div>}
 
           {pasoCompra===1&&<div>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto compraste de {insumoSel?.nombre}?</div>
-            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>{compra.esNuevo?`${compra.nombre.trim()} es nuevo — contanos cómo es`:`¿Cuánto compraste de ${insumoSel?.nombre}?`}</div>
+            {compra.esNuevo&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>Es la primera vez que lo comprás, así que necesitamos un par de datos más para poder calcular todo solo de acá en adelante.</div>}
+            {compra.esNuevo&&<div style={{marginBottom:16}}>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
+                <button type="button" className={compra.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"gramos",unidadEntrada:"kg"})}>⚖️ Se pesa (gramos)</button>
+                <button type="button" className={compra.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"mililitros",unidadEntrada:"litro"})}>💧 Es líquido (ml)</button>
+                <button type="button" className={compra.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"unidad",unidadEntrada:"unidad"})}>🔢 Se cuenta (unidad)</button>
+              </div>
+            </div>}
+            <div style={{marginBottom:compra.esNuevo?16:0}}>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿En qué venía?</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
+                <select className="field" style={{width:120}} value={compra.presentacion} onChange={e=>setCompra({...compra,presentacion:e.target.value})}>
+                  {PRESENTACIONES.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+                {compra.presentacion==="Otro"&&<input className="field" style={{width:120}} value={compra.presentacionOtro} onChange={e=>setCompra({...compra,presentacionOtro:e.target.value})} placeholder="ej: Tambor"/>}
+              </div>
+            </div>
+            {!compra.esNuevo&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>}
             <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
-              <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {insumoSel?.presentacion||"paquetes"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} autoFocus value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
-              <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno ({insumoSel?.unidad})</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoUnitario} onChange={e=>setCompra({...compra,contenidoUnitario:num(e.target.value)})} placeholder="ej: 3000"/></div>
+              <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {presentacionFinal.toLowerCase()}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
+              {compra.esNuevo?(
+                <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno</label>
+                  <div style={{display:"flex",gap:6}}>
+                    <input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoValorNuevo} onChange={e=>setCompra({...compra,contenidoValorNuevo:num(e.target.value)})} placeholder="ej: 8"/>
+                    {compra.tipoMedida==="gramos"&&<select className="field" style={{width:90}} value={compra.unidadEntrada} onChange={e=>setCompra({...compra,unidadEntrada:e.target.value})}><option value="kg">kilos</option><option value="g">gramos</option></select>}
+                    {compra.tipoMedida==="mililitros"&&<select className="field" style={{width:90}} value={compra.unidadEntrada} onChange={e=>setCompra({...compra,unidadEntrada:e.target.value})}><option value="litro">litros</option><option value="ml">ml</option></select>}
+                    {compra.tipoMedida==="unidad"&&<span style={{fontSize:14.5,color:"var(--ink-soft)",alignSelf:"center"}}>unidades</span>}
+                  </div>
+                </div>
+              ):(
+                <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno ({insumoSel?.unidad})</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoUnitario} onChange={e=>setCompra({...compra,contenidoUnitario:num(e.target.value)})} placeholder="ej: 3000"/></div>
+              )}
             </div>
             {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidad(cantCompra,insumoSel?.unidad)} en total</div>}
             <div style={{display:"flex",gap:10,marginTop:16}}>
@@ -911,7 +975,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto pagaste en total?</div>
             <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>El precio de todo lo que compraste junto, no de una sola unidad.</div>
             <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
-            <input className="field" inputMode="decimal" style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.precio_total} onChange={e=>setCompra({...compra,precio_total:num(e.target.value)})} placeholder="ej: 9000"/>
+            <CampoMonto style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={compra.precio_total} onChange={v=>setCompra({...compra,precio_total:v})} placeholder="ej: 9000"/>
             <div style={{marginTop:14}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Proveedor (opcional)</label><input className="field" value={compra.proveedor} onChange={e=>setCompra({...compra,proveedor:e.target.value})} placeholder="ej: Distribuidora Sur"/></div>
             <div style={{display:"flex",gap:10,marginTop:16}}>
               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(1)}>← Atrás</button>
@@ -1085,15 +1149,6 @@ function PanelStock({userId,insumos,reload}){
                 <option value="unidad">🔢 Se cuenta (unidad)</option>
               </select>
             </div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                <select className="field" style={{width:120}} value={editForm.presentacion} onChange={e=>setEditForm({...editForm,presentacion:e.target.value})}>
-                  {["Paquete","Botella","Bolsa","Caja","Docena","Otro"].map(p=><option key={p} value={p}>{p}</option>)}
-                </select>
-                <input className="field" style={{width:110}} inputMode="decimal" value={editForm.contenidoPresentacion} onChange={e=>setEditForm({...editForm,contenidoPresentacion:num(e.target.value)})} placeholder={`en ${editForm.unidad}`}/>
-              </div>
-              <div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto trae cada {editForm.presentacion?.toLowerCase()||"presentación"}, en {editForm.unidad} — esto es lo que Compras va a usar como referencia la próxima vez.</div>
-            </div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, en {editForm.unidad}. ({formatCantidad(editForm.stock_actual,editForm.unidad)})</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
@@ -1101,7 +1156,7 @@ function PanelStock({userId,insumos,reload}){
               <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
                 <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Contiene</label><input className="field" style={{width:90}} inputMode="decimal" value={editForm.contenidoPaquete} onChange={e=>setEditForm({...editForm,contenidoPaquete:num(e.target.value)})}/></div>
                 <div style={{fontSize:14,paddingBottom:9}}>{editForm.unidad||"unidad"} por</div>
-                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><input className="field" style={{width:110}} inputMode="decimal" value={editForm.precioPaquete} onChange={e=>setEditForm({...editForm,precioPaquete:num(e.target.value)})}/></div>
+                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><CampoMonto style={{width:110}} value={editForm.precioPaquete} onChange={v=>setEditForm({...editForm,precioPaquete:v})}/></div>
               </div>
               <div style={{fontSize:14,fontWeight:700,color:"var(--accent)",marginTop:6}}>= {money((Number(editForm.precioPaquete)||0)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad||"unidad"}</div>
             </div>
@@ -1243,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       }
       if(sueltos&&sueltos.length){
         await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
-      }
+         }
       reload();
       alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
     }finally{
@@ -1279,7 +1334,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
         </div>
         {openIngreso&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
-          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><input className="field" style={{width:120}} inputMode="decimal" value={ingresoForm.monto} onChange={e=>setIngresoForm({...ingresoForm,monto:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 5000"/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto style={{width:120}} value={ingresoForm.monto} onChange={v=>setIngresoForm({...ingresoForm,monto:v})} placeholder="ej: 5000"/></div>
           <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Medio de pago</label>
             <select className="field" value={ingresoForm.metodo_pago} onChange={e=>setIngresoForm({...ingresoForm,metodo_pago:e.target.value})}>
               <option value="efectivo">Efectivo</option>
@@ -1298,7 +1353,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
                 <div style={{fontWeight:700,fontSize:15}}>{i.descripcion||"Ingreso"}</div>
                 <div style={{fontWeight:700,color:"var(--accent)",whiteSpace:"nowrap"}}>{money(i.monto)}</div>
-                </div>
+              </div>
               <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:2}}>{i.fecha} · {i.metodo_pago}</div>
               <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarIngreso(i.id)}>🗑 Borrar</button>
             </div>
@@ -1316,7 +1371,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               {CATEGORIAS_GASTO.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
           </div>
-          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><input className="field" style={{width:120}} inputMode="decimal" value={gastoForm.monto} onChange={e=>setGastoForm({...gastoForm,monto:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 15000"/></div>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto style={{width:120}} value={gastoForm.monto} onChange={v=>setGastoForm({...gastoForm,monto:v})} placeholder="ej: 15000"/></div>
           <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Medio de pago</label>
             <select className="field" value={gastoForm.metodo_pago} onChange={e=>setGastoForm({...gastoForm,metodo_pago:e.target.value})}>
               <option value="efectivo">Efectivo</option>
@@ -1441,8 +1496,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       </div>
     </div>
   );
-}
-
+  }
+  
 function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas,cierres}){
   const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
   const UMBRAL_AUMENTO_COSTO=config?.umbral_aumento_costo??15;
@@ -1498,7 +1553,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           productosMargenBajo:margenBajo.map(m=>({nombre:m.nombre,margenPct:m.pct})),
           productosCostoSubio:productosCostoSubio.map(m=>({nombre:m.nombre,subioPct:m.pct})),
         }),
-        });
+      });
       const d=await res.json();
       setAnalisis(d.resumen||"No se pudo generar el análisis.");
     }catch(e){setAnalisis("Error de conexión al generar el análisis.");}
