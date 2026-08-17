@@ -1,4 +1,4 @@
-      <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
     else localStorage.removeItem("modula_mesa");
-  },[mesaId]);
-  useEffect(()=>{
+  },[mesaId]);     
+    useEffect(()=>{
     if(mesaId&&mesas.length){
       const m=mesas.find(mm=>mm.id===mesaId);
       if(!m||m.estado!=="ocupada"||m.mozo_id!==identidad.id)setMesaId(null);
@@ -497,8 +497,8 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
-      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>    
-           <div style={{padding:18}}>
+      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>                        
+       <div style={{padding:18}}>
         {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
           {Object.entries(porMesa).map(([mesa,its])=>(
@@ -698,7 +698,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
           </select>
-               </div>
+              </div>
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
@@ -858,25 +858,25 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
 function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
   const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
-  const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoUnitario:"",contenidoValorNuevo:"",precio_total:"",proveedor:""});
+  const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
   const[openC,setOpenC]=useState(false);
   const[pasoCompra,setPasoCompra]=useState(0);
-  const factorEntradaCompra=()=>compra.tipoMedida==="gramos"?(compra.unidadEntrada==="kg"?1000:1):compra.tipoMedida==="mililitros"?(compra.unidadEntrada==="litro"?1000:1):1;
-  const contenidoPorUnidad=compra.esNuevo?(Number(compra.contenidoValorNuevo)||0)*factorEntradaCompra():(Number(compra.contenidoUnitario)||0);
+  const contenidoPorUnidad=compra.tipoMedida==="unidad"?(Number(compra.contenidoValor)||0):(Number(compra.contenidoValor)||0)*1000;
   const cantCompra=(Number(compra.cantidadPaquetes)||0)*contenidoPorUnidad;
   const totalCompra=Number(compra.precio_total)||0;
   const precioUnitCalc=cantCompra>0?totalCompra/cantCompra:0;
   const UMBRAL_AUMENTO=config?.umbral_aumento_costo??15;
   const productosAfectados=insumoId=>menu.filter(m=>!m.archivado&&recetas.some(r=>r.menu_item_id===m.id&&r.insumo_id===insumoId));
-  const resetCompra=()=>setCompra({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoUnitario:"",contenidoValorNuevo:"",precio_total:"",proveedor:""});
+  const resetCompra=()=>setCompra({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
   const confirmarProducto=()=>{
     const nombreTrim=compra.nombre.trim();
     if(!nombreTrim)return;
     const match=insumos.find(i=>i.nombre.trim().toLowerCase()===nombreTrim.toLowerCase());
     if(match){
-      setCompra({...compra,nombre:match.nombre,insumo_id:match.id,esNuevo:false,cantidadPaquetes:"1",contenidoUnitario:match.contenido_presentacion!=null?String(match.contenido_presentacion):"",presentacion:match.presentacion||"Paquete"});
+      const contenidoGrande=match.contenido_presentacion==null?"":(match.unidad==="unidad"?String(match.contenido_presentacion):String(Number(match.contenido_presentacion)/1000));
+      setCompra({...compra,nombre:match.nombre,insumo_id:match.id,esNuevo:false,tipoMedida:match.unidad,cantidadPaquetes:"1",contenidoValor:contenidoGrande,presentacion:match.presentacion||"Paquete"});
     }else{
-      setCompra({...compra,insumo_id:"",esNuevo:true,cantidadPaquetes:"1",contenidoValorNuevo:""});
+      setCompra({...compra,insumo_id:"",esNuevo:true,cantidadPaquetes:"1",contenidoValor:""});
     }
     setPasoCompra(1);
   };
@@ -894,9 +894,9 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     }
     const ins=insumos.find(i=>i.id===insumoId);
     const stockPrevio=ins?Number(ins.stock_actual):0;
-   await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:Number(compra.esNuevo?contenidoPorUnidad:compra.contenidoUnitario)||ins?.contenido_presentacion}).eq("id",insumoId);
-    await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
-    resetCompra();setOpenC(false);reload();
+    await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:contenidoPorUnidad||ins?.contenido_presentacion}).eq("id",insumoId);
+    await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null}
+         resetCompra();setOpenC(false);reload();
   };
   const borrarCompra=async c=>{
     const nombreIns=insumos.find(i=>i.id===c.insumo_id)?.nombre||"este insumo";
@@ -934,9 +934,9 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             {compra.esNuevo&&<div style={{marginBottom:16}}>
               <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
               <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
-                <button type="button" className={compra.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"gramos",unidadEntrada:"kg"})}>⚖️ Se pesa (gramos)</button>
-                <button type="button" className={compra.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"mililitros",unidadEntrada:"litro"})}>💧 Es líquido (ml)</button>
-                <button type="button" className={compra.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"unidad",unidadEntrada:"unidad"})}>🔢 Se cuenta (unidad)</button>
+                <button type="button" className={compra.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"gramos"})}>⚖️ Se pesa (por kilo)</button>
+                <button type="button" className={compra.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"mililitros"})}>💧 Es líquido (por litro)</button>
+                <button type="button" className={compra.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setCompra({...compra,tipoMedida:"unidad"})}>🔢 Se cuenta (unidad)</button>
               </div>
             </div>}
             <div style={{marginBottom:compra.esNuevo?16:0}}>
@@ -951,18 +951,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             {!compra.esNuevo&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>}
             <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
               <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {presentacionFinal.toLowerCase()}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
-              {compra.esNuevo?(
-                <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno</label>
-                  <div style={{display:"flex",gap:6}}>
-                    <input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoValorNuevo} onChange={e=>setCompra({...compra,contenidoValorNuevo:num(e.target.value)})} placeholder="ej: 8"/>
-                    {compra.tipoMedida==="gramos"&&<select className="field" style={{width:90}} value={compra.unidadEntrada} onChange={e=>setCompra({...compra,unidadEntrada:e.target.value})}><option value="kg">kilos</option><option value="g">gramos</option></select>}
-                    {compra.tipoMedida==="mililitros"&&<select className="field" style={{width:90}} value={compra.unidadEntrada} onChange={e=>setCompra({...compra,unidadEntrada:e.target.value})}><option value="litro">litros</option><option value="ml">ml</option></select>}
-                    {compra.tipoMedida==="unidad"&&<span style={{fontSize:14.5,color:"var(--ink-soft)",alignSelf:"center"}}>unidades</span>}
-                  </div>
-                </div>
-              ):(
-                <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno ({insumoSel?.unidad})</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoUnitario} onChange={e=>setCompra({...compra,contenidoUnitario:num(e.target.value)})} placeholder="ej: 3000"/></div>
-              )}
+              <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno {compra.tipoMedida==="gramos"?"(en kilos)":compra.tipoMedida==="mililitros"?"(en litros)":"(unidades)"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoValor} onChange={e=>setCompra({...compra,contenidoValor:num(e.target.value)})} placeholder={compra.tipoMedida==="unidad"?"ej: 12":"ej: 2"}/></div>
             </div>
             {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidad(cantCompra,insumoSel?.unidad)} en total</div>}
             <div style={{display:"flex",gap:10,marginTop:16}}>
@@ -1097,8 +1086,8 @@ function PanelStock({userId,insumos,reload}){
         const etiquetaBase=form.tipoMedida==="gramos"?"gramos":form.tipoMedida==="mililitros"?"mililitros":"unidades";
         return(
         <div className="card" style={{padding:16,marginBottom:16,display:"flex",flexDirection:"column",gap:14}}>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Mayonesa"/></div> 
-               <div>
+          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Mayonesa"/></div>
+          <div>
             <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
               <button type="button" className={form.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("gramos")}>⚖️ Se pesa (gramos)</button>
@@ -1108,8 +1097,8 @@ function PanelStock({userId,insumos,reload}){
             <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:6}}>Ej: harina, carne o mayonesa → se pesa. Fernet, aceite o gaseosa → líquido. Huevos, latas o servilletas → se cuenta.</div>
           </div>
           <div>
-            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
+            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>   
+           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
               <select className="field" style={{width:130}} value={form.presentacion} onChange={e=>setForm({...form,presentacion:e.target.value})}>
                 {PRESENTACIONES.map(p=><option key={p} value={p}>{p}</option>)}
               </select>
@@ -1298,7 +1287,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         mesasCant++;
       });
       if(aCerrarAhora.length===0&&(!sueltos||!sueltos.length)){
-         alert("No hay ninguna mesa para cerrar. La caja ya está al día.");
+        alert("No hay ninguna mesa para cerrar. La caja ya está al día.");
         return;
       }
       const total=ef+tar+tr;
@@ -1309,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       }
       if(sueltos&&sueltos.length){
         await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
-      }
+       }
       reload();
       alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
     }finally{
@@ -1498,7 +1487,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
                       <span>{money(i2.precio)}</span>
                     </div>
                   ))}
-                       </div>
+                </div>
               ))}
               <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
             </div>}
@@ -1507,8 +1496,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       </div>
     </div>
   );
-}
-
+      }
+      
 function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas,cierres}){
   const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
   const UMBRAL_AUMENTO_COSTO=config?.umbral_aumento_costo??15;
@@ -1698,7 +1687,7 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
   const gananciaHoy=ventasHoy-costoMercaderiaHoy-gastosHoy;
   const mesasOcupadas=mesas.filter(m=>m.estado==="ocupada").length;
   const cierreHoy=cierres.find(c=>c.fecha===hoy());
-   const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
+  const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
   const margenBajo=menu.filter(m=>!m.archivado&&m.precio>0).map(m=>{
     const costo=costoProducto(m,recetas,insumos);
     if(costo==null)return{...m,pct:null};
@@ -1747,4 +1736,4 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>    
+</html>
