@@ -1,4 +1,4 @@
-       <!DOCTYPE html>
+      <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
     else localStorage.removeItem("modula_mesa");
-  },[mesaId]);     
-   useEffect(()=>{
+  },[mesaId]);
+  useEffect(()=>{
     if(mesaId&&mesas.length){
       const m=mesas.find(mm=>mm.id===mesaId);
       if(!m||m.estado!=="ocupada"||m.mozo_id!==identidad.id)setMesaId(null);
@@ -497,8 +497,8 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
-      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>     
-   <div style={{padding:18}}>
+      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>    
+           <div style={{padding:18}}>
         {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
           {Object.entries(porMesa).map(([mesa,its])=>(
@@ -697,8 +697,8 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
-          </select>                                                       
-          </div>
+          </select>
+               </div>
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
@@ -894,7 +894,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     }
     const ins=insumos.find(i=>i.id===insumoId);
     const stockPrevio=ins?Number(ins.stock_actual):0;
-    await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:Number(compra.esNuevo?contenidoPorUnidad:compra.contenidoUnitario)||ins?.contenido_presentacion}).eq("id",insumoId);
+   await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:Number(compra.esNuevo?contenidoPorUnidad:compra.contenidoUnitario)||ins?.contenido_presentacion}).eq("id",insumoId);
     await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
     resetCompra();setOpenC(false);reload();
   };
@@ -1080,7 +1080,8 @@ function PanelStock({userId,insumos,reload}){
   };
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
-  const abrirEdicion=i=>{setEditId(i.id);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
+  const[corregirPrecio,setCorregirPrecio]=useState(false);
+  const abrirEdicion=i=>{setEditId(i.id);setCorregirPrecio(false);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
   const guardarEdicion=async()=>{
     const contenido=Number(editForm.contenidoPaquete)||1;
     const precioNuevo=(Number(editForm.precioPaquete)||0)/contenido;
@@ -1096,8 +1097,8 @@ function PanelStock({userId,insumos,reload}){
         const etiquetaBase=form.tipoMedida==="gramos"?"gramos":form.tipoMedida==="mililitros"?"mililitros":"unidades";
         return(
         <div className="card" style={{padding:16,marginBottom:16,display:"flex",flexDirection:"column",gap:14}}>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Mayonesa"/></div>
-          <div>
+          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Mayonesa"/></div> 
+               <div>
             <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
               <button type="button" className={form.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("gramos")}>⚖️ Se pesa (gramos)</button>
@@ -1152,13 +1153,23 @@ function PanelStock({userId,insumos,reload}){
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, en {editForm.unidad}. ({formatCantidad(editForm.stock_actual,editForm.unidad)})</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
-              <div style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:6}}>Esto se actualiza solo cada vez que registrás una compra en 🛒 Compras. Usalo acá solo si necesitás corregirlo a mano.</div>
-              <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Contiene</label><input className="field" style={{width:90}} inputMode="decimal" value={editForm.contenidoPaquete} onChange={e=>setEditForm({...editForm,contenidoPaquete:num(e.target.value)})}/></div>
-                <div style={{fontSize:14,paddingBottom:9}}>{editForm.unidad||"unidad"} por</div>
-                <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><CampoMonto style={{width:110}} value={editForm.precioPaquete} onChange={v=>setEditForm({...editForm,precioPaquete:v})}/></div>
-              </div>
-              <div style={{fontSize:14,fontWeight:700,color:"var(--accent)",marginTop:6}}>= {money((Number(editForm.precioPaquete)||0)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad||"unidad"}</div>
+              <div style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:6}}>Esto se actualiza solo cada vez que registrás una compra en 🛒 Compras.</div>
+              {!corregirPrecio?(
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <div style={{fontSize:16,fontWeight:700,color:"var(--ink)"}}>{money(Number(editForm.precioPaquete)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad==="gramos"?"gramo":editForm.unidad==="mililitros"?"ml":"unidad"}</div>
+                  <button type="button" className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={()=>setCorregirPrecio(true)}>✏️ Corregir a mano</button>
+                </div>
+              ):(
+                <div>
+                  <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                    <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Contiene</label><input className="field" style={{width:90}} inputMode="decimal" value={editForm.contenidoPaquete} onChange={e=>setEditForm({...editForm,contenidoPaquete:num(e.target.value)})}/></div>
+                    <div style={{fontSize:14,paddingBottom:9}}>{editForm.unidad||"unidad"} por</div>
+                    <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><CampoMonto style={{width:110}} value={editForm.precioPaquete} onChange={v=>setEditForm({...editForm,precioPaquete:v})}/></div>
+                  </div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--accent)",marginTop:6}}>= {money((Number(editForm.precioPaquete)||0)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad||"unidad"}</div>
+                  <button type="button" className="bg" style={{fontSize:13,padding:"5px 10px",marginTop:6}} onClick={()=>setCorregirPrecio(false)}>Listo</button>
+                </div>
+              )}
             </div>
             <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
           </div>
@@ -1287,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         mesasCant++;
       });
       if(aCerrarAhora.length===0&&(!sueltos||!sueltos.length)){
-        alert("No hay ninguna mesa para cerrar. La caja ya está al día.");
+         alert("No hay ninguna mesa para cerrar. La caja ya está al día.");
         return;
       }
       const total=ef+tar+tr;
@@ -1298,7 +1309,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       }
       if(sueltos&&sueltos.length){
         await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
-         }
+      }
       reload();
       alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
     }finally{
@@ -1487,7 +1498,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
                       <span>{money(i2.precio)}</span>
                     </div>
                   ))}
-                </div>
+                       </div>
               ))}
               <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
             </div>}
@@ -1496,8 +1507,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       </div>
     </div>
   );
-  }
-  
+}
+
 function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas,cierres}){
   const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
   const UMBRAL_AUMENTO_COSTO=config?.umbral_aumento_costo??15;
@@ -1687,7 +1698,7 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
   const gananciaHoy=ventasHoy-costoMercaderiaHoy-gastosHoy;
   const mesasOcupadas=mesas.filter(m=>m.estado==="ocupada").length;
   const cierreHoy=cierres.find(c=>c.fecha===hoy());
-  const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
+   const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
   const margenBajo=menu.filter(m=>!m.archivado&&m.precio>0).map(m=>{
     const costo=costoProducto(m,recetas,insumos);
     if(costo==null)return{...m,pct:null};
@@ -1736,4 +1747,4 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>
+</html>    
