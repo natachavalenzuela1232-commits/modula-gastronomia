@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -117,10 +117,15 @@ function Login(){
   );
 }
 
-function SelectorIdentidad({empleados,onElegir}){
+function SelectorIdentidad({empleados,config,onElegir}){
   const[eli,setEli]=useState(null);
   const[pin,setPin]=useState("");
   const[err,setErr]=useState("");
+  const pinDueno=(config?.pin_dueno||"").trim();
+  const elegirDueno=()=>{
+    if(!pinDueno){onElegir({rol:"dueño",id:null,nombre:"Dueño/a"});return;}
+    setEli({esDueno:true,pin:pinDueno,rol:"dueño",id:null,nombre:"Dueño/a"});setPin("");setErr("");
+  };
   const confirmar=()=>{if(eli.pin!==pin.trim()){setErr("PIN incorrecto.");return;}onElegir({rol:eli.rol,id:eli.id,nombre:eli.nombre});};
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:20}}>
@@ -128,13 +133,14 @@ function SelectorIdentidad({empleados,onElegir}){
         {!eli?(
           <React.Fragment>
             <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:20,color:"var(--primary-dark)",textAlign:"center",marginBottom:22}}>¿Quién sos?</div>
-            <button className="bp" style={{width:"100%",padding:14,marginBottom:10,fontSize:15}} onClick={()=>onElegir({rol:"dueño",id:null,nombre:"Dueño/a"})}>👑 Soy el dueño/a</button>
+            <button className="bp" style={{width:"100%",padding:14,marginBottom:10,fontSize:15}} onClick={elegirDueno}>👑 Soy el dueño/a</button>
             {empleados.filter(e=>e.activo).map(e=>(
               <button key={e.id} className="bg" style={{width:"100%",padding:14,marginBottom:8,fontSize:14.5,textAlign:"left",display:"flex",alignItems:"center",gap:10}} onClick={()=>{setEli(e);setPin("");setErr("");}}>
                 {e.rol==="mozo"?"🧑‍🍳":"👨‍🍳"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:14,fontWeight:700}}>{e.rol==="mozo"?"MOZO":"COCINA"}</span>
               </button>
             ))}
             {!empleados.filter(e=>e.activo).length&&<div style={{fontSize:15,color:"var(--ink-soft)",textAlign:"center",marginTop:8}}>El dueño puede agregar empleados desde su panel.</div>}
+            {!pinDueno&&<div style={{fontSize:13,color:"var(--warn)",textAlign:"center",marginTop:14}}>⚠ Todavía no configuraste un PIN para "Soy el dueño/a" — cualquiera puede entrar ahí. Podés ponerle uno desde Configuración una vez adentro.</div>}
           </React.Fragment>
         ):(
           <React.Fragment>
@@ -185,7 +191,7 @@ function App(){
       pedidos:p.data||[],items:it.data||[],insumos:ins.data||[],
       recetas:rec.data||[],cierres:ci.data||[],compras:cp.data||[],
       mensajes:msg.data||[],gastos:ga.data||[],ingresosExtra:ie.data||[],
-      config:{umbral_aumento_costo:cfgRow?.umbral_aumento_costo??15,umbral_margen_bajo:cfgRow?.umbral_margen_bajo??25},
+      config:{umbral_aumento_costo:cfgRow?.umbral_aumento_costo??15,umbral_margen_bajo:cfgRow?.umbral_margen_bajo??25,pin_dueno:cfgRow?.pin_dueno||""},
     });
     setLoading(false);
   };
@@ -206,7 +212,7 @@ function App(){
   if(session===undefined)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando…</div>;
   if(!session)return<Login/>;
   if(loading)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando el negocio…</div>;
-  if(!identidad)return<SelectorIdentidad empleados={data.empleados} onElegir={elegir}/>;
+  if(!identidad)return<SelectorIdentidad empleados={data.empleados} config={data.config} onElegir={elegir}/>;
 
   const props={userId:session.user.id,identidad,...data,reload:loadAll,cambiar,logout};
   if(identidad.rol==="dueño")return<VistaDueño {...props}/>;
@@ -292,13 +298,13 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     for(const r of recs){
       await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:-Number(r.cantidad)});
     }
-  };
+     };
   const restaurarStock=async menuItemId=>{
     const recs=recetas.filter(r=>r.menu_item_id===menuItemId);
     for(const r of recs){
       await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:Number(r.cantidad)});
-    }   
-       };
+    }
+  };
   const[ultimoAgregado,setUltimoAgregado]=useState(null);
   const agregarItem=async mi=>{
     if(!mesaSel)return;
@@ -498,7 +504,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
             </div>
           ))}
         </div>
-          </div>
+      </div>
     </div>
   );
 }
@@ -692,13 +698,13 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
   );
 }
 function PanelMenu({userId,menu,insumos,recetas,reload}){
-  const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});
+   const[form,setForm]=useState({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});
   const[open,setOpen]=useState(false);
   const[selItem,setSelItem]=useState(null);
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
   const[busqueda,setBusqueda]=useState("");
-    const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
+  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
@@ -889,7 +895,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
 
           {pasoCompra===1&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto compraste de {insumoSel?.nombre}?</div>
-          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>
             <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
               <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {insumoSel?.presentacion||"paquetes"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} autoFocus value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
               <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno ({insumoSel?.unidad})</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoUnitario} onChange={e=>setCompra({...compra,contenidoUnitario:num(e.target.value)})} placeholder="ej: 3000"/></div>
@@ -1292,13 +1298,13 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
                 <div style={{fontWeight:700,fontSize:15}}>{i.descripcion||"Ingreso"}</div>
                 <div style={{fontWeight:700,color:"var(--accent)",whiteSpace:"nowrap"}}>{money(i.monto)}</div>
-              </div>
+                </div>
               <div style={{fontSize:14,color:"var(--ink-soft)",marginTop:2}}>{i.fecha} · {i.metodo_pago}</div>
               <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarIngreso(i.id)}>🗑 Borrar</button>
             </div>
           ))}
-        </div>}  
-          </div>
+        </div>}
+      </div>
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>GASTOS OPERATIVOS</div>
@@ -1492,13 +1498,13 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           productosMargenBajo:margenBajo.map(m=>({nombre:m.nombre,margenPct:m.pct})),
           productosCostoSubio:productosCostoSubio.map(m=>({nombre:m.nombre,subioPct:m.pct})),
         }),
-      });
+        });
       const d=await res.json();
       setAnalisis(d.resumen||"No se pudo generar el análisis.");
     }catch(e){setAnalisis("Error de conexión al generar el análisis.");}
     finally{setAnalisisLoading(false);}
   };
-    return(
+  return(
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📊 Acá ves cómo le está yendo al negocio: cuánto vendiste, cuánto te costó lo que vendiste, cuánto gastaste, y qué productos conviene empujar o revisar.</span>
@@ -1582,11 +1588,11 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
 }
 
 function PanelConfiguracion({userId,config,reload}){
-  const[form,setForm]=useState({umbral_aumento_costo:String(config?.umbral_aumento_costo??15),umbral_margen_bajo:String(config?.umbral_margen_bajo??25)});
+  const[form,setForm]=useState({umbral_aumento_costo:String(config?.umbral_aumento_costo??15),umbral_margen_bajo:String(config?.umbral_margen_bajo??25),pin_dueno:config?.pin_dueno||""});
   const[guardado,setGuardado]=useState(false);
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
   const guardar=async()=>{
-    await sb.from("configuracion").upsert({user_id:userId,umbral_aumento_costo:Number(form.umbral_aumento_costo)||15,umbral_margen_bajo:Number(form.umbral_margen_bajo)||25,updated_at:new Date().toISOString()});
+    await sb.from("configuracion").upsert({user_id:userId,umbral_aumento_costo:Number(form.umbral_aumento_costo)||15,umbral_margen_bajo:Number(form.umbral_margen_bajo)||25,pin_dueno:form.pin_dueno.trim()||null,updated_at:new Date().toISOString()});
     setGuardado(true);setTimeout(()=>setGuardado(false),2500);reload();
   };
   return(
@@ -1595,6 +1601,11 @@ function PanelConfiguracion({userId,config,reload}){
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>⚙️ Acá ajustás los números que la app usa para avisarte de cosas automáticamente.</span>
       </div>
       <div className="card" style={{padding:18,maxWidth:420}}>
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN para entrar como dueño/a</label>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Si lo dejás vacío, cualquiera puede tocar "Soy el dueño/a" sin PIN. Con un PIN puesto, se va a pedir antes de dejar entrar a ver costos, márgenes y caja.</div>
+          <input className="field" inputMode="numeric" style={{width:120,textAlign:"center",letterSpacing:3}} value={form.pin_dueno} onChange={e=>setForm({...form,pin_dueno:e.target.value.replace(/\D/g,"")})} placeholder="ej: 1234"/>
+        </div>
         <div style={{marginBottom:16}}>
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Aviso de aumento de costo</label>
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Se usa en Compras (al pagar más caro un insumo) y en Resultados (productos cuyo costo subió).</div>
