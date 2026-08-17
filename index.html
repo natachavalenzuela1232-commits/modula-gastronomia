@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -65,9 +65,16 @@ const money=n=>`$${Number(n||0).toLocaleString("es-AR")}`;
 const hora=iso=>new Date(iso).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
 const hoy=()=>new Date().toISOString().slice(0,10);
 const costoProducto=(item,recetas,insumos)=>{
-  if(item.usa_receta===false)return Number(item.costo_manual)||0;
+  if(item.usa_receta===false){const cm=Number(item.costo_manual);return cm>0?cm:null;}
   const recs=recetas.filter(r=>r.menu_item_id===item.id);
-  return recs.reduce((s,r)=>{const ins=insumos.find(i=>i.id===r.insumo_id);return s+(ins?Number(ins.precio_compra)*Number(r.cantidad):0);},0);
+  if(!recs.length)return null;
+  let total=0;
+  for(const r of recs){
+    const ins=insumos.find(i=>i.id===r.insumo_id);
+    if(!ins||!(Number(ins.precio_compra)>0))return null;
+    total+=Number(ins.precio_compra)*Number(r.cantidad);
+  }
+  return total;
 };
 const formatCantidad=(valor,unidad)=>{
   const v=Number(valor)||0;
@@ -290,15 +297,15 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const recs=recetas.filter(r=>r.menu_item_id===menuItemId);
     for(const r of recs){
       await sb.rpc("ajustar_stock",{p_insumo_id:r.insumo_id,p_delta:Number(r.cantidad)});
-    }
-  };
+    }   
+       };
   const[ultimoAgregado,setUltimoAgregado]=useState(null);
   const agregarItem=async mi=>{
     if(!mesaSel)return;
     let pedActual=pedSel;
     if(!pedActual){
-      await sb.from("mesas").update({estado:"ocupada",mozo_id:identidad.id,mozo_nombre:identidad.nombre}).eq("id",mesaSel.id);    
-     const{data:nuevoPed}=await sb.from("pedidos").insert({user_id:userId,mesa_id:mesaSel.id,mesa_numero:mesaSel.numero,mozo_id:identidad.id,mozo_nombre:identidad.nombre,estado:"abierta"}).select().single();
+      await sb.from("mesas").update({estado:"ocupada",mozo_id:identidad.id,mozo_nombre:identidad.nombre}).eq("id",mesaSel.id);
+      const{data:nuevoPed}=await sb.from("pedidos").insert({user_id:userId,mesa_id:mesaSel.id,mesa_numero:mesaSel.numero,mozo_id:identidad.id,mozo_nombre:identidad.nombre,estado:"abierta"}).select().single();
       pedActual=nuevoPed;
     }
     const{data:nuevo}=await sb.from("pedido_items").insert({user_id:userId,pedido_id:pedActual.id,mesa_numero:mesaSel.numero,menu_item_id:mi.id,nombre:mi.nombre,precio:mi.precio,aclaracion:acl.trim()||null,estado:mi.va_a_cocina?"pendiente":"entregado"}).select().single();
@@ -491,13 +498,13 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
             </div>
           ))}
         </div>
-      </div>
+          </div>
     </div>
   );
 }
 
 // ---- VISTA DUEÑO ----
-function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){      
+function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumos,recetas,cierres,compras,gastos,ingresosExtra,config,reload,cambiar,logout}){
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"inicio");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
@@ -691,13 +698,13 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
   const[busqueda,setBusqueda]=useState("");
-  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
+    const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
   const[verArchivados,setVerArchivados]=useState(false);
   const del=async id=>{
-    if(!confirm("¿Eliminar este ítem?"))return;     
+    if(!confirm("¿Eliminar este ítem?"))return;
     await sb.from("recetas").delete().eq("menu_item_id",id);
     const{error}=await sb.from("menu_items").delete().eq("id",id);
     if(error){
@@ -717,7 +724,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
   const costoItem=item=>costoProducto(item,recetas,insumos);
   const[verTabla,setVerTabla]=useState(false);
-  const tablaRent=[...menu.filter(m=>!m.archivado)].map(m=>{const costo=costoItem(m);return{...m,costo,margen:m.precio-costo};}).sort((a,b)=>b.margen-a.margen);
+  const tablaRent=[...menu.filter(m=>!m.archivado)].map(m=>{const costo=costoItem(m);return{...m,costo,margen:costo==null?null:m.precio-costo};}).sort((a,b)=>(b.margen??-Infinity)-(a.margen??-Infinity));
   return(
     <div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo ítem del menú</button>
@@ -736,9 +743,9 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
             {tablaRent.map(m=>(
               <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
                 <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",color:m.costo==null?"var(--warn)":"var(--ink-soft)"}}>{m.costo==null?"Sin precio":money(m.costo)}</td>
                 <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
               </tr>
             ))}
           </tbody>
@@ -770,7 +777,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
         <div key={cat} style={{marginBottom:22}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
-            {menuFiltrado.filter(m=>m.categoria===cat).map(m=>{const costo=costoItem(m);const margen=m.precio-costo;const pct=m.precio>0?Math.round(margen/m.precio*100):0;return(
+            {menuFiltrado.filter(m=>m.categoria===cat).map(m=>{const costo=costoItem(m);const margen=costo==null?null:m.precio-costo;const pct=costo==null||m.precio<=0?null:Math.round(margen/m.precio*100);return(
               <div key={m.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
                 {editId===m.id?(()=>{
                   const costoEdit=editForm.usaReceta?costoItem(m):(Number(editForm.costoManual)||0);
@@ -789,7 +796,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                   );})():(
                 <>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                    <div><div style={{fontWeight:700,fontSize:16}}>{m.nombre}</div>{costo>0&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
+                    <div><div style={{fontWeight:700,fontSize:16}}>{m.nombre}</div>{costo==null?<div style={{fontSize:13.5,color:"var(--warn)",fontWeight:700}}>⚠ Sin precio — falta comprar algún ingrediente</div>:<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Costo: {money(costo)} · Margen: {money(margen)} ({pct}%)</div>}</div>
                     <span className="tag" style={{background:m.activo?"var(--accent-tint)":"var(--surface-2)",color:m.activo?"var(--accent)":"var(--ink-soft)",whiteSpace:"nowrap"}}>{m.activo?"Activo":"Pausado"}</span>
                   </div>
                   <div style={{fontWeight:800,fontSize:19,color:"var(--primary-dark)",fontFamily:"'Fraunces',serif"}}>{money(m.precio)}</div>
@@ -841,7 +848,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     setCompra({...compra,insumo_id:id,cantidadPaquetes:"1",contenidoUnitario:ins?.contenido_presentacion!=null?String(ins.contenido_presentacion):""});
   };
   const registrarCompra=async()=>{
-    if(!compra.insumo_id||!cantCompra)return;
+    if(!compra.insumo_id||!cantCompra||!(totalCompra>0))return;
     const cant=cantCompra;const precio=precioUnitCalc;
     const ins=insumos.find(i=>i.id===compra.insumo_id);if(!ins)return;
     await sb.from("insumos").update({stock_actual:Number(ins.stock_actual)+cant,precio_compra:precio||ins.precio_compra,contenido_presentacion:Number(compra.contenidoUnitario)||ins.contenido_presentacion}).eq("id",ins.id);
@@ -882,14 +889,14 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
 
           {pasoCompra===1&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto compraste de {insumoSel?.nombre}?</div>
-            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>{insumoSel?.presentacion&&insumoSel?.contenido_presentacion?`La última vez cargaste ${insumoSel.presentacion} de ${formatCantidad(insumoSel.contenido_presentacion,insumoSel.unidad)} — corregí si esta vez es distinto.`:`Decinos cuántos ${insumoSel?.presentacion||"paquetes"} compraste y cuánto trae cada uno.`}</div>
             <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
               <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {insumoSel?.presentacion||"paquetes"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} autoFocus value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
               <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno ({insumoSel?.unidad})</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoUnitario} onChange={e=>setCompra({...compra,contenidoUnitario:num(e.target.value)})} placeholder="ej: 3000"/></div>
             </div>
             {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidad(cantCompra,insumoSel?.unidad)} en total</div>}
             <div style={{display:"flex",gap:10,marginTop:16}}>
-               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
               <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!cantCompra} onClick={()=>setPasoCompra(2)}>Siguiente →</button>
             </div>
           </div>}
@@ -1290,15 +1297,15 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <button className="bg" style={{fontSize:13,padding:"4px 8px",marginTop:8}} onClick={()=>borrarIngreso(i.id)}>🗑 Borrar</button>
             </div>
           ))}
-        </div>}
-      </div>
+        </div>}  
+          </div>
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>GASTOS OPERATIVOS</div>
           <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenGasto(!openGasto)}>➕ Nuevo gasto</button>
         </div>
-        {openGasto&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>         
-<div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label>
+        {openGasto&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
+          <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Categoría</label>
             <select className="field" value={gastoForm.categoria} onChange={e=>setGastoForm({...gastoForm,categoria:e.target.value})}>
               {CATEGORIAS_GASTO.map(c=><option key={c} value={c}>{c}</option>)}
             </select>
@@ -1444,9 +1451,10 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
   const productosCostoSubio=menu.filter(m=>!m.archivado).map(m=>{
     const costoActual=costoProducto(m,recetas,insumos);
     const costoAnterior=costoProducto(m,recetas,insumosPrecioAnterior);
-    const pct=costoAnterior>0?Math.round(((costoActual-costoAnterior)/costoAnterior)*100):0;
+    if(costoActual==null||costoAnterior==null||costoAnterior<=0)return{...m,costoActual,costoAnterior,pct:null};
+    const pct=Math.round(((costoActual-costoAnterior)/costoAnterior)*100);
     return{...m,costoActual,costoAnterior,pct};
-  }).filter(m=>m.costoAnterior>0&&m.pct>=UMBRAL_AUMENTO_COSTO).sort((a,b)=>b.pct-a.pct);
+  }).filter(m=>m.pct!=null&&m.pct>=UMBRAL_AUMENTO_COSTO).sort((a,b)=>b.pct-a.pct);
   const itemsHoy=items.filter(i=>i.created_at&&i.created_at.slice(0,10)===hoy());
   const ventasHoy=itemsHoy.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
   const costoMercaderiaHoy=itemsHoy.reduce((s,i)=>{const mi=menu.find(m=>m.id===i.menu_item_id);return s+(mi?costoItem(mi)*i.cantidad:0);},0);
@@ -1455,14 +1463,15 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
   const margenPctHoy=ventasHoy>0?Math.round((gananciaHoy/ventasHoy)*100):0;
   const tabla=menu.filter(m=>!m.archivado).map(m=>{
     const costo=costoItem(m);
-    const margen=m.precio-costo;
-    const pct=m.precio>0?Math.round((margen/m.precio)*100):0;
+    const margen=costo==null?null:m.precio-costo;
+    const pct=costo==null||m.precio<=0?null:Math.round((margen/m.precio)*100);
     return{...m,costo,margen,pct};
-  }).sort((a,b)=>b.margen-a.margen);
+  }).sort((a,b)=>(b.margen??-Infinity)-(a.margen??-Infinity));
   const conVentaHoy=new Set(itemsHoy.map(i=>i.menu_item_id));
-  const masRentables=tabla.filter(m=>m.precio>0).slice(0,5);
-  const menosRentables=[...tabla].filter(m=>m.precio>0).sort((a,b)=>a.margen-b.margen).slice(0,5);
-  const margenBajo=tabla.filter(m=>m.precio>0&&m.pct<UMBRAL_MARGEN_BAJO);
+  const masRentables=tabla.filter(m=>m.precio>0&&m.margen!=null).slice(0,5);
+  const menosRentables=[...tabla].filter(m=>m.precio>0&&m.margen!=null).sort((a,b)=>a.margen-b.margen).slice(0,5);
+  const margenBajo=tabla.filter(m=>m.precio>0&&m.pct!=null&&m.pct<UMBRAL_MARGEN_BAJO);
+  const sinPrecio=tabla.filter(m=>m.precio>0&&m.costo==null);
   const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
   const generarAnalisis=async()=>{
     setAnalisisLoading(true);setAnalisis(null);
@@ -1489,7 +1498,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
     }catch(e){setAnalisis("Error de conexión al generar el análisis.");}
     finally{setAnalisisLoading(false);}
   };
-  return(
+    return(
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📊 Acá ves cómo le está yendo al negocio: cuánto vendiste, cuánto te costó lo que vendiste, cuánto gastaste, y qué productos conviene empujar o revisar.</span>
@@ -1498,13 +1507,18 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
       {analisis&&<div className="card" style={{padding:18,marginBottom:16,background:"var(--accent-tint)",border:"1px solid var(--accent)",whiteSpace:"pre-wrap",fontSize:14.5,lineHeight:1.55}}>{analisis}</div>}
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HOY</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:16}}>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENTAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary-dark)"}}>{money(ventasHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>COSTO MERCADERÍA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(costoMercaderiaHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GASTOS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700}}>{money(gastosHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA ESTIMADA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:gananciaHoy<0?"var(--warn)":"var(--accent)"}}>{money(gananciaHoy)}{ventasHoy>0&&<span style={{fontSize:14,fontWeight:600,color:"var(--ink-soft)"}}> ({margenPctHoy}%)</span>}</div></div>
         </div>
       </div>
+      {sinPrecio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos sin precio todavía</div>
+        <div style={{fontSize:13.5,color:"var(--warn)",marginBottom:6}}>Todavía no se puede calcular el margen — falta comprar algún ingrediente de la receta.</div>
+        {sinPrecio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre}</div>)}
+      </div>}
       {margenBajo.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos con margen menor a {UMBRAL_MARGEN_BAJO}%</div>
         {margenBajo.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — margen {m.pct}% ({money(m.margen)})</div>)}
@@ -1553,10 +1567,10 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
             {tabla.map(m=>(
               <tr key={m.id} style={{borderBottom:"1px solid var(--line)"}}>
                 <td style={{padding:"9px 14px",fontWeight:700,whiteSpace:"nowrap"}}>{m.nombre}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",color:"var(--ink-soft)"}}>{money(m.costo)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",color:m.costo==null?"var(--warn)":"var(--ink-soft)"}}>{m.costo==null?"Sin precio":money(m.costo)}</td>
                 <td style={{padding:"9px 14px",textAlign:"right"}}>{money(m.precio)}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen<0?"var(--warn)":"var(--accent)"}}>{money(m.margen)}</td>
-                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.pct<UMBRAL_MARGEN_BAJO?"var(--warn)":"var(--ink)"}}>{m.pct}%</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
+                <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.pct==null?"var(--warn)":m.pct<UMBRAL_MARGEN_BAJO?"var(--warn)":"var(--ink)"}}>{m.pct==null?"—":`${m.pct}%`}</td>
                 <td style={{padding:"9px 14px",textAlign:"center"}}>{conVentaHoy.has(m.id)?"✅":"—"}</td>
               </tr>
             ))}
@@ -1610,9 +1624,10 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
   const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
   const margenBajo=menu.filter(m=>!m.archivado&&m.precio>0).map(m=>{
     const costo=costoProducto(m,recetas,insumos);
+    if(costo==null)return{...m,pct:null};
     const pct=Math.round(((m.precio-costo)/m.precio)*100);
     return{...m,pct};
-  }).filter(m=>m.pct<UMBRAL_MARGEN_BAJO);
+  }).filter(m=>m.pct!=null&&m.pct<UMBRAL_MARGEN_BAJO);
   const saludo=identidad?.nombre?`Hola, ${identidad.nombre}`:"Hola";
   const fechaLarga=new Date().toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
   return(
