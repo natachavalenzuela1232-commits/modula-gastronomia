@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+        <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -82,6 +82,12 @@ const formatCantidad=(valor,unidad)=>{
   if(unidad==="mililitros"&&Math.abs(v)>=1000)return`${(v/1000).toLocaleString("es-AR",{maximumFractionDigits:1})} L`;
   const etiqueta=unidad==="gramos"?"g":unidad==="mililitros"?"ml":(unidad||"unidad");
   return`${v.toLocaleString("es-AR",{maximumFractionDigits:1})} ${etiqueta}`;
+};
+const formatCantidadExacta=(valor,unidad)=>{
+  const v=Number(valor)||0;
+  if(unidad==="gramos")return`${(v/1000).toLocaleString("es-AR",{maximumFractionDigits:3})} kg (${v.toLocaleString("es-AR")} g)`;
+  if(unidad==="mililitros")return`${(v/1000).toLocaleString("es-AR",{maximumFractionDigits:3})} L (${v.toLocaleString("es-AR")} ml)`;
+  return`${v.toLocaleString("es-AR")} ${unidad||"unidad"}`;
 };
 function CampoMonto({value,onChange,placeholder,style,autoFocus}){
   const formatearVisible=v=>{
@@ -291,14 +297,14 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
   const cargarCobrosHoy=async()=>{
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
-    setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
-  };
+    setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));    
+     };
   useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
     else localStorage.removeItem("modula_mesa");
-  },[mesaId]);     
-    useEffect(()=>{
+  },[mesaId]);
+  useEffect(()=>{
     if(mesaId&&mesas.length){
       const m=mesas.find(mm=>mm.id===mesaId);
       if(!m||m.estado!=="ocupada"||m.mozo_id!==identidad.id)setMesaId(null);
@@ -492,13 +498,13 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
 
 // ---- VISTA COCINA ----
 function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
-  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+ const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
     <div>
-      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>                        
-       <div style={{padding:18}}>
+      <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>
+      <div style={{padding:18}}>
         {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
           {Object.entries(porMesa).map(([mesa,its])=>(
@@ -692,13 +698,13 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <button className="bg" style={{padding:"4px 8px",fontSize:13.5}} onClick={()=>delRec(r.id)}>✕</button>
         </div>
       );})}
-      <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+     <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:1}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
           </select>
-              </div>
+        </div>
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
@@ -895,8 +901,8 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     const ins=insumos.find(i=>i.id===insumoId);
     const stockPrevio=ins?Number(ins.stock_actual):0;
     await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:contenidoPorUnidad||ins?.contenido_presentacion}).eq("id",insumoId);
-    await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null}
-         resetCompra();setOpenC(false);reload();
+    await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
+    resetCompra();setOpenC(false);reload();
   };
   const borrarCompra=async c=>{
     const nombreIns=insumos.find(i=>i.id===c.insumo_id)?.nombre||"este insumo";
@@ -953,7 +959,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
               <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {presentacionFinal.toLowerCase()}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.cantidadPaquetes} onChange={e=>setCompra({...compra,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 1"/></div>
               <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno {compra.tipoMedida==="gramos"?"(en kilos)":compra.tipoMedida==="mililitros"?"(en litros)":"(unidades)"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={compra.contenidoValor} onChange={e=>setCompra({...compra,contenidoValor:num(e.target.value)})} placeholder={compra.tipoMedida==="unidad"?"ej: 12":"ej: 2"}/></div>
             </div>
-            {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidad(cantCompra,insumoSel?.unidad)} en total</div>}
+            {cantCompra>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidadExacta(cantCompra,insumoSel?.unidad)} en total</div>}
             <div style={{display:"flex",gap:10,marginTop:16}}>
               <button className="bg" style={{padding:14}} onClick={()=>setPasoCompra(0)}>← Atrás</button>
               <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!cantCompra} onClick={()=>setPasoCompra(2)}>Siguiente →</button>
@@ -982,7 +988,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
             <div>
               <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>Listo, confirmá:</div>
               <div className="card" style={{padding:16,background:"var(--surface-2)",marginBottom:16}}>
-                <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {formatCantidad(cantCompra,insumoSel?.unidad)} · {money(totalCompra)} en total{compra.proveedor?` · ${compra.proveedor}`:""}</div>
+                <div style={{fontSize:15,marginBottom:6}}>{insumoSel?.nombre} · {formatCantidadExacta(cantCompra,insumoSel?.unidad)} · {money(totalCompra)} en total{compra.proveedor?` · ${compra.proveedor}`:""}</div>
                 <div style={{fontSize:19,fontWeight:800,color:"var(--accent)"}}>= {money(precioUnitCalc)} por {insumoSel?.unidad==="gramos"?"gramo":insumoSel?.unidad==="mililitros"?"ml":"unidad"}</div>
                 {huboPrecioAntes&&<div style={{fontSize:14,color:"var(--ink-soft)",marginTop:6}}>Antes pagabas {money(precioAnterior)} por {insumoSel?.unidad==="gramos"?"gramo":insumoSel?.unidad==="mililitros"?"ml":"unidad"} {pctCambio!==0&&<span style={{fontWeight:700,color:pctCambio>0?"var(--warn)":"var(--accent)"}}>({pctCambio>0?"+":""}{pctCambio}%)</span>}</div>}
               </div>
@@ -1092,13 +1098,13 @@ function PanelStock({userId,insumos,reload}){
             <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
               <button type="button" className={form.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("gramos")}>⚖️ Se pesa (gramos)</button>
               <button type="button" className={form.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("mililitros")}>💧 Es líquido (ml)</button>
-              <button type="button" className={form.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("unidad")}>🔢 Se cuenta (unidad)</button>
+             <button type="button" className={form.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("unidad")}>🔢 Se cuenta (unidad)</button>
             </div>
             <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:6}}>Ej: harina, carne o mayonesa → se pesa. Fernet, aceite o gaseosa → líquido. Huevos, latas o servilletas → se cuenta.</div>
           </div>
           <div>
-            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>   
-           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
+            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
               <select className="field" style={{width:130}} value={form.presentacion} onChange={e=>setForm({...form,presentacion:e.target.value})}>
                 {PRESENTACIONES.map(p=><option key={p} value={p}>{p}</option>)}
               </select>
@@ -1292,13 +1298,13 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       }
       const total=ef+tar+tr;
       const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant}).select().single();
-      for(const p of aCerrarAhora){
+     for(const p of aCerrarAhora){
         await sb.from("pedidos").update({estado:"cerrada",total:p.tot,metodo_pago:p.met,cerrado_at:ahora,cierre_id:cierreNuevo.id}).eq("id",p.id);
         await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",p.mesa_id);
       }
       if(sueltos&&sueltos.length){
         await sb.from("pedidos").update({cierre_id:cierreNuevo.id}).in("id",sueltos.map(p=>p.id));
-       }
+      }
       reload();
       alert(`Caja cerrada. Total: ${money(total)}\nEfectivo: ${money(ef)}\nTarjeta: ${money(tar)}\nTransferencia: ${money(tr)}`);
     }finally{
@@ -1492,12 +1498,12 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
             </div>}
           </div>
-        );})}
+     );})}
       </div>
     </div>
   );
-      }
-      
+}
+
 function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas,cierres}){
   const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
   const UMBRAL_AUMENTO_COSTO=config?.umbral_aumento_costo??15;
