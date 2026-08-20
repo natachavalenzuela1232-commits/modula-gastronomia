@@ -1,4 +1,4 @@
-        <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -297,8 +297,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
   const cargarCobrosHoy=async()=>{
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
-    setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));    
-     };
+    setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
+   };
   useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
@@ -497,8 +497,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
 }
 
 // ---- VISTA COCINA ----
-function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
- const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){   
+  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
   return(
@@ -698,7 +698,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <button className="bg" style={{padding:"4px 8px",fontSize:13.5}} onClick={()=>delRec(r.id)}>✕</button>
         </div>
       );})}
-     <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+      <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:1}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
@@ -736,7 +736,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
     await sb.from("recetas").delete().eq("menu_item_id",id);
     const{error}=await sb.from("menu_items").delete().eq("id",id);
     if(error){
-      alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
+     alert("Este plato ya tiene ventas registradas en el historial, así que no se puede borrar (se perdería ese registro). Usá el botón \"Pausar\" en su lugar, para que deje de aparecer disponible sin borrar el historial.");
       return;
     }
     reload();
@@ -897,8 +897,8 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
       const{data:nuevo,error}=await sb.from("insumos").insert({nombre:compra.nombre.trim(),unidad:compra.tipoMedida,presentacion:presentacionFinal,contenido_presentacion:contenidoPorUnidad||null,stock_actual:0,stock_minimo:1,precio_compra:0,user_id:userId}).select().single();
       if(error||!nuevo)return;
       insumoId=nuevo.id;
-    }
-    const ins=insumos.find(i=>i.id===insumoId);
+        }
+  const ins=insumos.find(i=>i.id===insumoId);
     const stockPrevio=ins?Number(ins.stock_actual):0;
     await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:contenidoPorUnidad||ins?.contenido_presentacion}).eq("id",insumoId);
     await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
@@ -1046,21 +1046,8 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
 }
 
 function PanelStock({userId,insumos,reload}){
-  const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
-  const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Docena","Otro"];
-  const[form,setForm]=useState({nombre:"",tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",contenidoValor:"",stock_minimo:"1"});
-  const[open,setOpen]=useState(false);
   const[busqueda,setBusqueda]=useState("");
   const insumosFiltrados=insumos.filter(i=>i.nombre.toLowerCase().includes(busqueda.toLowerCase()));
-  const factorEntrada=f=>f.tipoMedida==="gramos"?(f.unidadEntrada==="kg"?1000:1):f.tipoMedida==="mililitros"?(f.unidadEntrada==="litro"?1000:1):1;
-  const elegirMedida=tipoMedida=>setForm({...form,tipoMedida,unidadEntrada:tipoMedida==="gramos"?"kg":tipoMedida==="mililitros"?"litro":"unidad"});
-  const add=async()=>{
-    if(!form.nombre)return;
-    const contenidoBase=(Number(form.contenidoValor)||0)*factorEntrada(form);
-    const presentacionFinal=form.presentacion==="Otro"?(form.presentacionOtro.trim()||"Presentación"):form.presentacion;
-    await sb.from("insumos").insert({nombre:form.nombre,unidad:form.tipoMedida,presentacion:presentacionFinal,contenido_presentacion:contenidoBase||null,stock_actual:0,stock_minimo:Number(form.stock_minimo)||1,precio_compra:0,user_id:userId});
-    setForm({nombre:"",tipoMedida:"gramos",unidadEntrada:"kg",presentacion:"Paquete",presentacionOtro:"",contenidoValor:"",stock_minimo:"1"});setOpen(false);reload();
-  };
   const del=async id=>{
     if(!confirm("¿Eliminar este insumo?"))return;
     const{error}=await sb.from("insumos").delete().eq("id",id);
@@ -1073,59 +1060,12 @@ function PanelStock({userId,insumos,reload}){
     }
     reload();
   };
-  const[editId,setEditId]=useState(null);
-  const[editForm,setEditForm]=useState({});
-  const[corregirPrecio,setCorregirPrecio]=useState(false);
-  const abrirEdicion=i=>{setEditId(i.id);setCorregirPrecio(false);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
-  const guardarEdicion=async()=>{
-    const contenido=Number(editForm.contenidoPaquete)||1;
-    const precioNuevo=(Number(editForm.precioPaquete)||0)/contenido;
-    await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,presentacion:editForm.presentacion,contenido_presentacion:editForm.contenidoPresentacion?Number(editForm.contenidoPresentacion):null,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:precioNuevo}).eq("id",editId);
-    setEditId(null);reload();
-  };
   const bajos=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   return(
     <div>
-      <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo insumo</button>
-      {open&&(()=>{
-        const contenidoBase=(Number(form.contenidoValor)||0)*factorEntrada(form);
-        const etiquetaBase=form.tipoMedida==="gramos"?"gramos":form.tipoMedida==="mililitros"?"mililitros":"unidades";
-        return(
-        <div className="card" style={{padding:16,marginBottom:16,display:"flex",flexDirection:"column",gap:14}}>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})} placeholder="Mayonesa"/></div>
-          <div>
-            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
-              <button type="button" className={form.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("gramos")}>⚖️ Se pesa (gramos)</button>
-              <button type="button" className={form.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("mililitros")}>💧 Es líquido (ml)</button>
-             <button type="button" className={form.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>elegirMedida("unidad")}>🔢 Se cuenta (unidad)</button>
-            </div>
-            <div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:6}}>Ej: harina, carne o mayonesa → se pesa. Fernet, aceite o gaseosa → líquido. Huevos, latas o servilletas → se cuenta.</div>
-          </div>
-          <div>
-            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo comprás normalmente?</label>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
-              <select className="field" style={{width:130}} value={form.presentacion} onChange={e=>setForm({...form,presentacion:e.target.value})}>
-                {PRESENTACIONES.map(p=><option key={p} value={p}>{p}</option>)}
-              </select>
-              {form.presentacion==="Otro"&&<input className="field" style={{width:130}} value={form.presentacionOtro} onChange={e=>setForm({...form,presentacionOtro:e.target.value})} placeholder="ej: Sachet"/>}
-            </div>
-          </div>
-          <div>
-            <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cuánto trae cada {form.presentacion==="Otro"?(form.presentacionOtro||"presentación"):form.presentacion.toLowerCase()}?</label>
-            <div style={{display:"flex",gap:8,alignItems:"center",marginTop:6}}>
-              <input className="field" style={{width:100}} inputMode="decimal" value={form.contenidoValor} onChange={e=>setForm({...form,contenidoValor:num(e.target.value)})} placeholder="ej: 3"/>
-              {form.tipoMedida==="gramos"&&<select className="field" style={{width:100}} value={form.unidadEntrada} onChange={e=>setForm({...form,unidadEntrada:e.target.value})}><option value="kg">kilos</option><option value="g">gramos</option></select>}
-              {form.tipoMedida==="mililitros"&&<select className="field" style={{width:100}} value={form.unidadEntrada} onChange={e=>setForm({...form,unidadEntrada:e.target.value})}><option value="litro">litros</option><option value="ml">mililitros</option></select>}
-              {form.tipoMedida==="unidad"&&<span style={{fontSize:14.5,color:"var(--ink-soft)"}}>unidades</span>}
-            </div>
-            {form.contenidoValor&&<div style={{fontSize:13.5,color:"var(--accent)",fontWeight:700,marginTop:4}}>= {formatCantidad(contenidoBase,form.tipoMedida)} ({contenidoBase.toLocaleString("es-AR")} {etiquetaBase})</div>}
-          </div>
-          <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock mínimo (en {etiquetaBase})</label><input className="field" type="number" style={{width:110}} value={form.stock_minimo} onChange={e=>setForm({...form,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando baje de este número, la app avisa "stock bajo".</div></div>
-          <button className="bp" onClick={add} style={{alignSelf:"flex-start"}}>Guardar insumo</button>
-          <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Se crea sin stock ni precio todavía — andá a "🛒 Compras" para cargar la primera compra: la app calcula el precio sola, sin que hagas ninguna cuenta.</div>
-        </div>
-        );})()}
+      <div className="card" style={{padding:"14px 16px",marginBottom:16,background:"var(--accent-tint)",border:"1px solid var(--accent)"}}>
+        <span style={{fontSize:15,fontWeight:800,color:"var(--accent)"}}>ℹ️ El stock se actualiza automáticamente a partir de tus compras, ventas y ajustes de inventario.</span>
+      </div>
       {bajos.length>0&&<div className="card" style={{padding:14,marginBottom:16,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ STOCK BAJO — Lista de recompra sugerida</div>
         {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {formatCantidad(i.stock_actual,i.unidad)} (mínimo: {formatCantidad(i.stock_minimo,i.unidad)})</div>)}
@@ -1135,40 +1075,7 @@ function PanelStock({userId,insumos,reload}){
       </div>
       <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12}}>
-        {insumosFiltrados.map(i=>editId===i.id?(
-          <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={e=>setEditForm({...editForm,nombre:e.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
-              <select className="field" value={editForm.unidad} onChange={e=>setEditForm({...editForm,unidad:e.target.value})}>
-                <option value="gramos">⚖️ Se pesa (gramos)</option>
-                <option value="mililitros">💧 Es líquido (mililitros)</option>
-                <option value="unidad">🔢 Se cuenta (unidad)</option>
-              </select>
-            </div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, en {editForm.unidad}. ({formatCantidad(editForm.stock_actual,editForm.unidad)})</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
-              <div style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:6}}>Esto se actualiza solo cada vez que registrás una compra en 🛒 Compras.</div>
-              {!corregirPrecio?(
-                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                  <div style={{fontSize:16,fontWeight:700,color:"var(--ink)"}}>{money(Number(editForm.precioPaquete)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad==="gramos"?"gramo":editForm.unidad==="mililitros"?"ml":"unidad"}</div>
-                  <button type="button" className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={()=>setCorregirPrecio(true)}>✏️ Corregir a mano</button>
-                </div>
-              ):(
-                <div>
-                  <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
-                    <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Contiene</label><input className="field" style={{width:90}} inputMode="decimal" value={editForm.contenidoPaquete} onChange={e=>setEditForm({...editForm,contenidoPaquete:num(e.target.value)})}/></div>
-                    <div style={{fontSize:14,paddingBottom:9}}>{editForm.unidad||"unidad"} por</div>
-                    <div><label style={{fontSize:12.5,color:"var(--ink-soft)"}}>Precio total</label><CampoMonto style={{width:110}} value={editForm.precioPaquete} onChange={v=>setEditForm({...editForm,precioPaquete:v})}/></div>
-                  </div>
-                  <div style={{fontSize:14,fontWeight:700,color:"var(--accent)",marginTop:6}}>= {money((Number(editForm.precioPaquete)||0)/(Number(editForm.contenidoPaquete)||1))} por {editForm.unidad||"unidad"}</div>
-                  <button type="button" className="bg" style={{fontSize:13,padding:"5px 10px",marginTop:6}} onClick={()=>setCorregirPrecio(false)}>Listo</button>
-                </div>
-              )}
-            </div>
-            <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
-          </div>
-        ):(
+        {insumosFiltrados.map(i=>(
           <div key={i.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
               <div><div style={{fontWeight:700,fontSize:16}}>{i.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>{money(i.precio_compra)} por {i.unidad==="gramos"?"gramo":i.unidad==="mililitros"?"ml":"unidad"}{i.presentacion&&i.contenido_presentacion?` · ${i.presentacion} de ${formatCantidad(i.contenido_presentacion,i.unidad)}`:""}</div></div>
@@ -1176,7 +1083,6 @@ function PanelStock({userId,insumos,reload}){
             </div>
             <div style={{fontWeight:800,fontSize:20,fontFamily:"'Fraunces',serif",color:i.stock_actual<0?"#8B1E2B":i.stock_actual<=i.stock_minimo?"var(--warn)":"var(--ink)"}}>{formatCantidad(i.stock_actual,i.unidad)} disponibles<span style={{fontSize:13.5,fontWeight:600,color:"var(--ink-soft)",fontFamily:"'Manrope',sans-serif"}}> · mín: {formatCantidad(i.stock_minimo,i.unidad)}</span></div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
-              <button className="bg" style={{fontSize:13.5,padding:"6px 10px"}} onClick={()=>abrirEdicion(i)}>✏️ Editar</button>
               <button className="bg" style={{fontSize:13.5,padding:"6px 8px"}} onClick={()=>del(i.id)}>🗑</button>
             </div>
           </div>
@@ -1191,7 +1097,7 @@ function PanelStock({userId,insumos,reload}){
 function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,gastos,ingresosExtra,reload}){
   const[metodo,setMetodo]=useState({});
   const[abierto,setAbierto]=useState(null);
-  const[cierreAbierto,setCierreAbierto]=useState(null);
+     const[cierreAbierto,setCierreAbierto]=useState(null);
   const[detalleCierre,setDetalleCierre]=useState({});
   const CATEGORIAS_GASTO=["Alquiler","Servicios","Sueldos","Mantenimiento","Publicidad","Impuestos","Otros"];
   const[gastoForm,setGastoForm]=useState({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});
@@ -1298,7 +1204,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       }
       const total=ef+tar+tr;
       const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant}).select().single();
-     for(const p of aCerrarAhora){
+      for(const p of aCerrarAhora){
         await sb.from("pedidos").update({estado:"cerrada",total:p.tot,metodo_pago:p.met,cerrado_at:ahora,cierre_id:cierreNuevo.id}).eq("id",p.id);
         await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",p.mesa_id);
       }
@@ -1391,7 +1297,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         </div>}
         {!gastos.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no registraste ningún gasto.</div>}
         {gastos.length>0&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",gap:12}}>
-          {gastos.map(g=>(
+        {gastos.map(g=>(
             <div key={g.id} className="card" style={{padding:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
                 <div style={{fontWeight:700,fontSize:15}}>{g.categoria}</div>
@@ -1498,7 +1404,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <button className="bg" style={{fontSize:13.5,padding:"6px 10px",color:"var(--primary)",borderColor:"var(--primary)"}} onClick={async()=>{if(!confirm("¿Borrar este cierre de caja? Esto no se puede deshacer."))return;await sb.from("cierres_caja").delete().eq("id",c.id);reload();}}>🗑 Borrar este cierre</button>
             </div>}
           </div>
-     );})}
+        );})}
       </div>
     </div>
   );
@@ -1591,7 +1497,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
         {margenBajo.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — margen {m.pct}% ({money(m.margen)})</div>)}
       </div>}
       {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
-        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>📈 Productos cuyo costo subió</div>
+        <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>📈 Productos cuyo costo subió</div>          
         {productosCostoSubio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — costo {money(m.costoAnterior)} → {money(m.costoActual)} <span style={{fontWeight:700}}>(+{m.pct}%)</span></div>)}
       </div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:22}}>
@@ -1743,3 +1649,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+                    
