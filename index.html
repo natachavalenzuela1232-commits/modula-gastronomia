@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
     setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
-    };
+      };
   useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
@@ -497,7 +497,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
 }
 
 // ---- VISTA COCINA ----
-function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
+   function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
   const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
@@ -698,7 +698,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <button className="bg" style={{padding:"4px 8px",fontSize:13.5}} onClick={()=>delRec(r.id)}>✕</button>
         </div>
       );})}
-     <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+       <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:1}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
@@ -1097,8 +1097,8 @@ function PanelStock({userId,insumos,reload}){
     await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,presentacion:editForm.presentacion,contenido_presentacion:editForm.contenidoPresentacion?Number(editForm.contenidoPresentacion):null,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:precioNuevo}).eq("id",editId);
     setEditId(null);reload();
   };
- const del=async id=>{
-    if(!confirm("¿Eliminar este insumo?"))return;
+  const del=async id=>{
+     if(!confirm("¿Eliminar este insumo?"))return;
     const{error}=await sb.from("insumos").delete().eq("id",id);
     if(error){
       if(confirm("Este insumo está usado en la receta de uno o más platos/bebidas, por eso no se puede borrar directo. ¿Querés borrarlo igual? (se va a sacar también de esas recetas)")){
@@ -1157,7 +1157,7 @@ function PanelStock({userId,insumos,reload}){
                 {inicial.presentacion==="Otro"&&<input className="field" style={{width:120}} value={inicial.presentacionOtro} onChange={e=>setInicial({...inicial,presentacionOtro:e.target.value})} placeholder="ej: Tambor"/>}
               </div>
             </div>
-            <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start",flexWrap:"wrap"}}>
               <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {presentacionFinalInicial.toLowerCase()}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={inicial.cantidadPaquetes} onChange={e=>setInicial({...inicial,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 15"/></div>
               <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno {inicial.tipoMedida==="gramos"?"(en kilos)":inicial.tipoMedida==="mililitros"?"(en litros)":"(unidades)"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={inicial.contenidoValor} onChange={e=>setInicial({...inicial,contenidoValor:num(e.target.value)})} placeholder={inicial.tipoMedida==="unidad"?"ej: 30":"ej: 0.900"}/>{inicial.tipoMedida!=="unidad"&&<div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:4}}>Menos de 1 {inicial.tipoMedida==="gramos"?"kilo":"litro"}: escribí la fracción — ej: 900{inicial.tipoMedida==="gramos"?"g = 0.900":"ml = 0.900"}</div>}</div>
             </div>
@@ -1284,8 +1284,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const meses=[...new Set(cierres.map(c=>c.fecha.slice(0,7)))].sort((a,b)=>b<a?-1:1);
   const[mesSel,setMesSel]=useState(meses[0]||"");
-   const[resumenMes,setResumenMes]=useState(null);
-  const[cargandoMes,setCargandoMes]=useState(false);
+  const[resumenMes,setResumenMes]=useState(null);
+    const[cargandoMes,setCargandoMes]=useState(false);
   const cargarResumenMes=async(mes)=>{
     setMesSel(mes);setResumenMes(null);
     const cierresMes=cierres.filter(c=>c.fecha.slice(0,7)===mes);
@@ -1698,7 +1698,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           </tbody>
         </table>
       </div>}
-     </div>
+       </div>
   );
 }
 
