@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
     setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
-    };
+     };
   useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
@@ -1052,7 +1052,10 @@ function PanelStock({userId,insumos,reload}){
   const[editId,setEditId]=useState(null);
   const[editForm,setEditForm]=useState({});
   const[corregirPrecio,setCorregirPrecio]=useState(false);
-  const abrirEdicion=i=>{setEditId(i.id);setCorregirPrecio(false);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
+  const[unidadGrandeEdit,setUnidadGrandeEdit]=useState(false);
+  const nombreUnidadGrande=u=>u==="gramos"?"kilos":u==="mililitros"?"litros":null;
+  const factorGrande=1000;
+  const abrirEdicion=i=>{setEditId(i.id);setCorregirPrecio(false);setUnidadGrandeEdit(false);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
   const guardarEdicion=async()=>{
     const contenido=Number(editForm.contenidoPaquete)||1;
     const precioNuevo=(Number(editForm.precioPaquete)||0)/contenido;
@@ -1095,10 +1098,17 @@ function PanelStock({userId,insumos,reload}){
                 <option value="mililitros">💧 Es líquido (mililitros)</option>
                 <option value="unidad">🔢 Se cuenta (unidad)</option>
               </select>
-            </div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" type="number" value={editForm.stock_actual} onChange={e=>setEditForm({...editForm,stock_actual:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, en {editForm.unidad}. ({formatCantidad(editForm.stock_actual,editForm.unidad)})</div></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" type="number" value={editForm.stock_minimo} onChange={e=>setEditForm({...editForm,stock_minimo:e.target.value})}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo".</div></div>
-       <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
+      </div>
+            {nombreUnidadGrande(editForm.unidad)&&<div>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿En qué unidad querés escribir los números de acá abajo?</label>
+              <div style={{display:"flex",gap:8}}>
+                <button type="button" className="bg" style={{flex:1,padding:10,background:unidadGrandeEdit?"transparent":"var(--accent-tint)",borderColor:unidadGrandeEdit?"var(--line)":"var(--accent)",fontWeight:unidadGrandeEdit?600:800}} onClick={()=>setUnidadGrandeEdit(false)}>{editForm.unidad}</button>
+                <button type="button" className="bg" style={{flex:1,padding:10,background:unidadGrandeEdit?"var(--accent-tint)":"transparent",borderColor:unidadGrandeEdit?"var(--accent)":"var(--line)",fontWeight:unidadGrandeEdit?800:600}} onClick={()=>setUnidadGrandeEdit(true)}>{nombreUnidadGrande(editForm.unidad)}</button>
+              </div>
+            </div>}
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Stock</label><input className="field" inputMode="decimal" value={unidadGrandeEdit?(editForm.stock_actual?String(Number(editForm.stock_actual)/factorGrande):""):editForm.stock_actual} onChange={e=>{const v=num(e.target.value);setEditForm({...editForm,stock_actual:unidadGrandeEdit?String((Number(v)||0)*factorGrande):v});}}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuánto tenés AHORA en el negocio, en {unidadGrandeEdit?nombreUnidadGrande(editForm.unidad):editForm.unidad}. ({formatCantidad(editForm.stock_actual,editForm.unidad)})</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Mínimo</label><input className="field" inputMode="decimal" value={unidadGrandeEdit?(editForm.stock_minimo?String(Number(editForm.stock_minimo)/factorGrande):""):editForm.stock_minimo} onChange={e=>{const v=num(e.target.value);setEditForm({...editForm,stock_minimo:unidadGrandeEdit?String((Number(v)||0)*factorGrande):v});}}/><div style={{fontSize:12.5,color:"var(--ink-soft)"}}>Cuando el stock baje de este número, la app te avisa "stock bajo". ({formatCantidad(editForm.stock_minimo,editForm.unidad)})</div></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Precio de referencia</label>
               <div style={{fontSize:12.5,color:"var(--ink-soft)",marginBottom:6}}>Esto se actualiza solo cada vez que registrás una compra en 🛒 Compras.</div>
               {!corregirPrecio?(
                 <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
@@ -1288,7 +1298,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>OTROS INGRESOS</div>
-          <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
+      <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
         </div>
         {openIngreso&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
           <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto style={{width:120}} value={ingresoForm.monto} onChange={v=>setIngresoForm({...ingresoForm,monto:v})} placeholder="ej: 5000"/></div>
@@ -1298,7 +1308,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <option value="tarjeta">Tarjeta</option>
               <option value="transferencia">Transferencia</option>
               <option value="otro">Otro</option>
-              </select>
+            </select>
           </div>
           <div style={{flex:"1 1 160px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Descripción (opcional)</label><input className="field" value={ingresoForm.descripcion} onChange={e=>setIngresoForm({...ingresoForm,descripcion:e.target.value})} placeholder="ej: alquiler del salón"/></div>
           <button className="bp" onClick={agregarIngreso}>Guardar</button>
@@ -1498,7 +1508,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
     const productosVendidos=tabla.filter(m=>conVentaHoy.has(m.id)).map(m=>{
       const cant=itemsHoy.filter(i=>i.menu_item_id===m.id).reduce((s,i)=>s+i.cantidad,0);
       return{nombre:m.nombre,cantidad:cant,venta:cant*Number(m.precio),costo:Math.round(cant*m.costo)};
-      }).sort((a,b)=>b.venta-a.venta);
+    }).sort((a,b)=>b.venta-a.venta);
     const comprasNecesarias=stockBajo.map(i=>({nombre:i.nombre,faltante:Math.max(i.stock_minimo-i.stock_actual,0),unidad:i.unidad}));
     try{
       const res=await fetch(`${SUPABASE_URL}/functions/v1/resumen-diario`,{
