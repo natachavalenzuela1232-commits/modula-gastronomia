@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -298,7 +298,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,recetas,i
     const{data}=await sb.from("pedidos").select("*").eq("mozo_id",identidad.id).eq("estado","cerrada").order("cerrado_at",{ascending:false}).limit(100);
     const hoyStr=hoy();
     setCobrosHoy((data||[]).filter(p=>p.cerrado_at&&p.cerrado_at.slice(0,10)===hoyStr));
-     };
+    };
   useEffect(()=>{cargarCobrosHoy();},[]);
   useEffect(()=>{
     if(mesaId)localStorage.setItem("modula_mesa",mesaId);
@@ -698,7 +698,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <button className="bg" style={{padding:"4px 8px",fontSize:13.5}} onClick={()=>delRec(r.id)}>✕</button>
         </div>
       );})}
-      <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+     <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:1}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Insumo</label>
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
@@ -1056,13 +1056,48 @@ function PanelStock({userId,insumos,reload}){
   const nombreUnidadGrande=u=>u==="gramos"?"kilos":u==="mililitros"?"litros":null;
   const factorGrande=1000;
   const abrirEdicion=i=>{setEditId(i.id);setCorregirPrecio(false);setUnidadGrandeEdit(false);setEditForm({nombre:i.nombre,unidad:i.unidad,presentacion:i.presentacion||"Paquete",contenidoPresentacion:i.contenido_presentacion!=null?String(i.contenido_presentacion):"",stock_actual:String(i.stock_actual),stock_minimo:String(i.stock_minimo),contenidoPaquete:"1",precioPaquete:String(i.precio_compra)});};
+  const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
+  const[openInicial,setOpenInicial]=useState(false);
+  const[pasoInicial,setPasoInicial]=useState(0);
+  const[inicial,setInicial]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",valor_total:""});
+  const resetInicial=()=>setInicial({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",valor_total:""});
+  const contenidoPorUnidadInicial=inicial.tipoMedida==="unidad"?(Number(inicial.contenidoValor)||0):(Number(inicial.contenidoValor)||0)*1000;
+  const cantTotalInicial=(Number(inicial.cantidadPaquetes)||0)*contenidoPorUnidadInicial;
+  const totalInicial=Number(inicial.valor_total)||0;
+  const precioUnitInicial=cantTotalInicial>0?totalInicial/cantTotalInicial:0;
+  const presentacionFinalInicial=inicial.presentacion==="Otro"?(inicial.presentacionOtro.trim()||"Presentación"):inicial.presentacion;
+  const confirmarProductoInicial=()=>{
+    const nombreTrim=inicial.nombre.trim();
+    if(!nombreTrim)return;
+    const match=insumos.find(i=>i.nombre.trim().toLowerCase()===nombreTrim.toLowerCase());
+    if(match){
+      setInicial({...inicial,nombre:match.nombre,insumo_id:match.id,esNuevo:false,tipoMedida:match.unidad,cantidadPaquetes:"1",contenidoValor:"",presentacion:match.presentacion||"Paquete"});
+    }else{
+      setInicial({...inicial,insumo_id:"",esNuevo:true,cantidadPaquetes:"1",contenidoValor:""});
+    }
+    setPasoInicial(1);
+  };
+  const insumoSelInicial=inicial.esNuevo?{id:null,nombre:inicial.nombre.trim(),unidad:inicial.tipoMedida,presentacion:presentacionFinalInicial}:insumos.find(i=>i.id===inicial.insumo_id);
+  const guardarStockInicial=async()=>{
+    if(!inicial.nombre.trim()||!cantTotalInicial||!(totalInicial>0))return;
+    let insumoId=inicial.insumo_id;
+    if(inicial.esNuevo){
+      const{data:nuevo,error}=await sb.from("insumos").insert({nombre:inicial.nombre.trim(),unidad:inicial.tipoMedida,presentacion:presentacionFinalInicial,contenido_presentacion:contenidoPorUnidadInicial||null,stock_actual:0,stock_minimo:1,precio_compra:0,user_id:userId}).select().single();
+      if(error||!nuevo)return;
+      insumoId=nuevo.id;
+    }
+    const ins=insumos.find(i=>i.id===insumoId);
+    const stockPrevio=ins?Number(ins.stock_actual):0;
+    await sb.from("insumos").update({stock_actual:stockPrevio+cantTotalInicial,precio_compra:precioUnitInicial,presentacion:presentacionFinalInicial,contenido_presentacion:contenidoPorUnidadInicial||ins?.contenido_presentacion}).eq("id",insumoId);
+    resetInicial();setOpenInicial(false);setPasoInicial(0);reload();
+  };
   const guardarEdicion=async()=>{
     const contenido=Number(editForm.contenidoPaquete)||1;
     const precioNuevo=(Number(editForm.precioPaquete)||0)/contenido;
     await sb.from("insumos").update({nombre:editForm.nombre,unidad:editForm.unidad,presentacion:editForm.presentacion,contenido_presentacion:editForm.contenidoPresentacion?Number(editForm.contenidoPresentacion):null,stock_actual:Number(editForm.stock_actual)||0,stock_minimo:Number(editForm.stock_minimo)||1,precio_compra:precioNuevo}).eq("id",editId);
     setEditId(null);reload();
   };
-  const del=async id=>{
+ const del=async id=>{
     if(!confirm("¿Eliminar este insumo?"))return;
     const{error}=await sb.from("insumos").delete().eq("id",id);
     if(error){
@@ -1085,8 +1120,66 @@ function PanelStock({userId,insumos,reload}){
         {bajos.map(i=><div key={i.id} style={{fontSize:14.5,padding:"4px 0",borderTop:"1px solid rgba(199,154,46,0.2)"}}>• {i.nombre}: quedan {formatCantidad(i.stock_actual,i.unidad)} (mínimo: {formatCantidad(i.stock_minimo,i.unidad)})</div>)}
       </div>}
       <div className="card" style={{padding:"12px 16px",marginBottom:14,background:"var(--surface-2)",border:"none"}}>
-        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📦 Acá ves la ficha de cada insumo: cuánto tenés, en qué unidad lo contás y cuándo avisarte que hay que reponer. Para sumar stock nuevo, usá la pestaña "🛒 Compras".</span>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📦 Acá ves la ficha de cada insumo: cuánto tenés, en qué unidad lo contás y cuándo avisarte que hay que reponer. Para sumar stock de algo que ya comprás seguido, usá "🛒 Compras". Si es la primera vez que usás MODULA y ya tenías insumos guardados en el negocio, usá el botón de acá abajo.</span>
       </div>
+      <button className="bp" style={{marginBottom:16}} onClick={()=>{setOpenInicial(!openInicial);setPasoInicial(0);resetInicial();}}>📦 Cargar stock inicial</button>
+      {openInicial&&(()=>{
+        return(
+        <div className="card" style={{padding:20,marginBottom:16}}>
+          <div style={{fontSize:19,fontWeight:800,color:"var(--primary-dark)",marginBottom:2}}>📦 Cargar stock inicial</div>
+          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:16}}>Paso {pasoInicial+1} de 3 — para productos que ya tenías en el negocio antes de usar MODULA. Esto NO se guarda como una compra, solo carga el stock y el costo de una.</div>
+          {pasoInicial===0&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué insumo ya tenías?</div>
+            <input className="field" style={{fontSize:16,padding:14}} autoFocus list="lista-insumos-inicial" value={inicial.nombre} onChange={e=>setInicial({...inicial,nombre:e.target.value})} placeholder="ej: Cerveza Quilmes" onKeyDown={e=>e.key==="Enter"&&confirmarProductoInicial()}/>
+            <datalist id="lista-insumos-inicial">{insumos.map(i=><option key={i.id} value={i.nombre}/>)}</datalist>
+            <div style={{fontSize:13,color:"var(--ink-soft)",marginTop:6}}>Si ya está cargado, elegilo de la lista. Si es nuevo, escribí el nombre y MODULA lo crea solo.</div>
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setOpenInicial(false)}>Cancelar</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!inicial.nombre.trim()} onClick={confirmarProductoInicial}>Siguiente →</button>
+            </div>
+          </div>}
+          {pasoInicial===1&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>{inicial.esNuevo?`${inicial.nombre.trim()} es nuevo — contanos cómo es`:`¿Cuánto tenías de ${insumoSelInicial?.nombre}?`}</div>
+            {inicial.esNuevo&&<div style={{marginBottom:16}}>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo se mide para las recetas?</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
+                <button type="button" className={inicial.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"gramos"})}>⚖️ Se pesa (por kilo)</button>
+                <button type="button" className={inicial.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"mililitros"})}>💧 Es líquido (por litro)</button>
+                <button type="button" className={inicial.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"unidad"})}>🔢 Se cuenta (unidad)</button>
+              </div>
+            </div>}
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿En qué venía?</label>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
+                <select className="field" style={{width:120}} value={inicial.presentacion} onChange={e=>setInicial({...inicial,presentacion:e.target.value})}>
+                  {PRESENTACIONES.map(p=><option key={p} value={p}>{p}</option>)}
+                </select>
+                {inicial.presentacion==="Otro"&&<input className="field" style={{width:120}} value={inicial.presentacionOtro} onChange={e=>setInicial({...inicial,presentacionOtro:e.target.value})} placeholder="ej: Tambor"/>}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,alignItems:"flex-end",flexWrap:"wrap"}}>
+              <div style={{flex:"1 1 100px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad de {presentacionFinalInicial.toLowerCase()}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={inicial.cantidadPaquetes} onChange={e=>setInicial({...inicial,cantidadPaquetes:num(e.target.value)})} placeholder="ej: 15"/></div>
+              <div style={{flex:"1 1 140px"}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cuánto trae cada uno {inicial.tipoMedida==="gramos"?"(en kilos)":inicial.tipoMedida==="mililitros"?"(en litros)":"(unidades)"}</label><input className="field" inputMode="decimal" style={{fontSize:18,padding:12,textAlign:"center"}} value={inicial.contenidoValor} onChange={e=>setInicial({...inicial,contenidoValor:num(e.target.value)})} placeholder={inicial.tipoMedida==="unidad"?"ej: 30":"ej: 0.900"}/>{inicial.tipoMedida!=="unidad"&&<div style={{fontSize:12.5,color:"var(--ink-soft)",marginTop:4}}>Menos de 1 {inicial.tipoMedida==="gramos"?"kilo":"litro"}: escribí la fracción — ej: 900{inicial.tipoMedida==="gramos"?"g = 0.900":"ml = 0.900"}</div>}</div>
+            </div>
+            {cantTotalInicial>0&&<div style={{textAlign:"center",fontSize:14.5,color:"var(--accent)",fontWeight:700,marginTop:10}}>= {formatCantidadExacta(cantTotalInicial,insumoSelInicial?.unidad)} en total</div>}
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoInicial(0)}>← Atrás</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!cantTotalInicial} onClick={()=>setPasoInicial(2)}>Siguiente →</button>
+            </div>
+          </div>}
+          {pasoInicial===2&&<div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>¿Cuánto sale todo lo que tenés?</div>
+            <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>El valor de todo junto, no de una sola unidad — por ejemplo, cuánto pagarías hoy por reponer todo eso.</div>
+            <div style={{fontSize:20,fontWeight:700,color:"var(--ink-soft)",display:"inline"}}>$ </div>
+            <CampoMonto style={{fontSize:20,padding:14,textAlign:"center"}} autoFocus value={inicial.valor_total} onChange={v=>setInicial({...inicial,valor_total:v})} placeholder="ej: 30000"/>
+            {totalInicial>0&&cantTotalInicial>0&&<div style={{textAlign:"center",fontSize:15,fontWeight:700,color:"var(--accent)",marginTop:10}}>= {money(precioUnitInicial)} por {insumoSelInicial?.unidad==="gramos"?"gramo":insumoSelInicial?.unidad==="mililitros"?"ml":"unidad"}</div>}
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button className="bg" style={{padding:14}} onClick={()=>setPasoInicial(1)}>← Atrás</button>
+              <button className="bp" style={{background:"var(--accent)",flex:1,padding:14}} disabled={!(totalInicial>0)} onClick={guardarStockInicial}>✅ Guardar stock inicial</button>
+            </div>
+          </div>}
+        </div>
+        );})()}
       <input className="field" placeholder="🔎 Buscar insumo…" value={busqueda} onChange={e=>setBusqueda(e.target.value)} style={{marginBottom:16}}/>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:12}}>
         {insumosFiltrados.map(i=>editId===i.id?(
@@ -1098,7 +1191,7 @@ function PanelStock({userId,insumos,reload}){
                 <option value="mililitros">💧 Es líquido (mililitros)</option>
                 <option value="unidad">🔢 Se cuenta (unidad)</option>
               </select>
-      </div>
+            </div>
             {nombreUnidadGrande(editForm.unidad)&&<div>
               <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿En qué unidad querés escribir los números de acá abajo?</label>
               <div style={{display:"flex",gap:8}}>
@@ -1191,7 +1284,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const costoItemVD=item=>costoProducto(item,recetas,insumos);
   const meses=[...new Set(cierres.map(c=>c.fecha.slice(0,7)))].sort((a,b)=>b<a?-1:1);
   const[mesSel,setMesSel]=useState(meses[0]||"");
-  const[resumenMes,setResumenMes]=useState(null);
+   const[resumenMes,setResumenMes]=useState(null);
   const[cargandoMes,setCargandoMes]=useState(false);
   const cargarResumenMes=async(mes)=>{
     setMesSel(mes);setResumenMes(null);
@@ -1298,7 +1391,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div className="card" style={{padding:18,marginBottom:22}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)"}}>OTROS INGRESOS</div>
-      <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
+          <button className="bp" style={{padding:"8px 14px",fontSize:14.5}} onClick={()=>setOpenIngreso(!openIngreso)}>➕ Nuevo ingreso</button>
         </div>
         {openIngreso&&<div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16,paddingBottom:16,borderBottom:"1px solid var(--line)"}}>
           <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto style={{width:120}} value={ingresoForm.monto} onChange={v=>setIngresoForm({...ingresoForm,monto:v})} placeholder="ej: 5000"/></div>
@@ -1405,7 +1498,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
               <option value="transferencia">Transferencia</option>
             </select>
             {abiertoAqui&&<div style={{background:"var(--surface-2)",borderRadius:8,padding:"8px 12px"}}>
-              {itemsP.map(i2=>(
+               {itemsP.map(i2=>(
                 <div key={i2.id} style={{display:"flex",justifyContent:"space-between",fontSize:15,padding:"3px 0"}}>
                   <span>{i2.nombre}{i2.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i2.aclaracion}</span>}</span>
                   <span>{money(i2.precio)}</span>
@@ -1605,7 +1698,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           </tbody>
         </table>
       </div>}
-    </div>
+     </div>
   );
 }
 
