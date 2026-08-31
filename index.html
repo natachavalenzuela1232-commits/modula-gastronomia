@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -139,6 +139,7 @@ function Login(){
   const[mode,setMode]=useState("signin");
   const[email,setEmail]=useState("");
   const[pw,setPw]=useState("");
+  const[verPw,setVerPw]=useState(false);
   const[loading,setLoading]=useState(false);
   const[msg,setMsg]=useState("");
   const submit=async()=>{
@@ -157,7 +158,7 @@ function Login(){
           <div style={{fontSize:15,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":"Creá la cuenta de tu negocio"}</div>
         </div>
         <div style={{marginBottom:12}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Email</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tunegocio@email.com"/></div>
-        <div style={{marginBottom:18}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><input className="field" type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/></div>
+        <div style={{marginBottom:18}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><div style={{position:"relative"}}><input className="field" type={verPw?"text":"password"} style={{paddingRight:44}} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/><button type="button" onClick={()=>setVerPw(!verPw)} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,padding:8,color:"var(--ink-soft)"}} aria-label={verPw?"Ocultar contraseña":"Mostrar contraseña"}>{verPw?"🙈":"👁️"}</button></div></div>
         {msg&&<div style={{fontSize:15,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
         <button className="bp" style={{width:"100%",padding:12}} onClick={submit} disabled={loading||!email||!pw}>{loading?"Un momento…":mode==="signin"?"Iniciar sesión":"Crear cuenta"}</button>
         <div style={{textAlign:"center",marginTop:16,fontSize:14}}>
@@ -187,7 +188,7 @@ function SelectorIdentidad({empleados,config,onElegir}){
             <button className="bp" style={{width:"100%",padding:14,marginBottom:10,fontSize:15}} onClick={elegirDueno}>👑 Soy el dueño/a</button>
             {empleados.filter(e=>e.activo).map(e=>(
               <button key={e.id} className="bg" style={{width:"100%",padding:14,marginBottom:8,fontSize:14.5,textAlign:"left",display:"flex",alignItems:"center",gap:10}} onClick={()=>{setEli(e);setPin("");setErr("");}}>
-                {e.rol==="mozo"?"🧑‍🍳":"👨‍🍳"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:14,fontWeight:700}}>{e.rol==="mozo"?"MOZO":"COCINA"}</span>
+                {e.rol==="mozo"?"🧑‍🍳":e.rol==="cocina"?"👨‍🍳":"🧑‍💼"} {e.nombre}<span style={{marginLeft:"auto",color:"var(--ink-soft)",fontSize:14,fontWeight:700}}>{e.rol==="mozo"?"MOZO":e.rol==="cocina"?"COCINA":(e.rol||"").toUpperCase()}</span>
               </button>
             ))}
             {!empleados.filter(e=>e.activo).length&&<div style={{fontSize:15,color:"var(--ink-soft)",textAlign:"center",marginTop:8}}>El dueño puede agregar empleados desde su panel.</div>}
@@ -276,8 +277,22 @@ function App(){
   if(identidad.rol==="dueño")return<VistaDueño {...props}/>;
   if(identidad.rol==="mozo")return<VistaMozo {...props}/>;
   if(identidad.rol==="cocina")return<VistaCocina {...props}/>;
-  return null;
+  return<VistaRolPendiente {...props}/>;
 }
+
+function VistaRolPendiente({identidad,cambiar,logout}){
+  return(
+    <div style={{minHeight:"100vh"}}>
+      <TopBar titulo="MODULA" identidad={identidad} cambiar={cambiar} logout={logout}/>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:40}}>
+        <div className="card" style={{maxWidth:420,padding:28,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:10}}>🧑‍💼</div>
+          <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:18,color:"var(--primary-dark)",marginBottom:8}}>Rol "{identidad.rol}" todavía sin pantalla propia</div>
+          <div style={{fontSize:15,color:"var(--ink-soft)",lineHeight:1.5}}>Tu usuario está cargado correctamente, pero este rol todavía no tiene una sección armada en la app. Avisale al dueño del negocio.</div>
+        </div>
+      </div>
+    </div>
+  );
 
 function TopBar({titulo,identidad,cambiar,logout}){
   return(
@@ -483,7 +498,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
                       {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
                         <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
-                          {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                                                   {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
                         </button>
                       ))}
                     </div>
@@ -698,7 +713,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
       setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
-     };
+  };
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
       <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
@@ -817,7 +832,8 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
       <button className="bp" style={{marginBottom:16}} onClick={()=>setOpen(!open)}>➕ Nuevo empleado</button>
       {open&&<div className="card" style={{padding:16,marginBottom:16,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
         <div style={{flex:"1 1 160px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={form.nombre} onChange={e=>setForm({...form,nombre:e.target.value})}/></div>
-        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+        <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><input className="field" list="roles-sugeridos" value={form.rol} onChange={e=>setForm({...form,rol:e.target.value})} placeholder="mozo"/></div>
+        <datalist id="roles-sugeridos"><option value="mozo"/><option value="cocina"/><option value="encargado"/><option value="cajero"/><option value="limpieza"/><option value="delivery"/><option value="telefonista"/></datalist>
         <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" style={{width:100}} value={form.pin} onChange={e=>setForm({...form,pin:e.target.value.replace(/\D/g,"")})} placeholder="1234"/></div>
         <button className="bp" onClick={add}>Guardar</button>
       </div>}
@@ -825,14 +841,14 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
         {empleados.map(e=>editId===e.id?(
           <div key={e.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Nombre</label><input className="field" value={editForm.nombre} onChange={ev=>setEditForm({...editForm,nombre:ev.target.value})}/></div>
-            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><select className="field" value={editForm.rol} onChange={ev=>setEditForm({...editForm,rol:ev.target.value})}><option value="mozo">Mozo</option><option value="cocina">Cocina</option></select></div>
+            <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Rol</label><input className="field" list="roles-sugeridos" value={editForm.rol} onChange={ev=>setEditForm({...editForm,rol:ev.target.value})}/></div>
             <div><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN</label><input className="field" value={editForm.pin} onChange={ev=>setEditForm({...editForm,pin:ev.target.value.replace(/\D/g,"")})}/></div>
             <div style={{display:"flex",gap:8}}><button className="bp" style={{flex:1}} onClick={guardarEdicion}>Guardar</button><button className="bg" onClick={()=>setEditId(null)}>Cancelar</button></div>
           </div>
         ):(
           <div key={e.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-              <div><div style={{fontWeight:700,fontSize:16}}>{e.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":"Cocina"} · PIN {e.pin}</div></div>
+              <div><div style={{fontWeight:700,fontSize:16}}>{e.nombre}</div><div style={{fontSize:14,color:"var(--ink-soft)"}}>{e.rol==="mozo"?"Mozo":e.rol==="cocina"?"Cocina":(e.rol?e.rol.charAt(0).toUpperCase()+e.rol.slice(1):"—")} · PIN {e.pin}</div></div>
               <span className="tag" style={{background:e.activo?"var(--accent-tint)":"var(--surface-2)",color:e.activo?"var(--accent)":"var(--ink-soft)",whiteSpace:"nowrap"}}>{e.activo?"Activo":"Inactivo"}</span>
             </div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
@@ -882,7 +898,7 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
                     </div>}
                   </div>
                 );
-              })()}
+            })()}
             </div>
           </div>
         ))}
@@ -1082,7 +1098,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
             <select className="field" value={recFactor} onChange={e=>setRecFactor(Number(e.target.value))}>
-              {opts.map(o=><option key={o.label} value={o.factor}>{o.label}</option>)}
+                           {opts.map(o=><option key={o.label} value={o.factor}>{o.label}</option>)}
             </select>
           </div>
         ):<div style={{fontSize:14,color:"var(--ink-soft)",paddingBottom:10}}>{opts[0].label}</div>;})()}
@@ -1098,7 +1114,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const[selItem,setSelItem]=useState(null);
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
-   const[busqueda,setBusqueda]=useState("");
+  const[busqueda,setBusqueda]=useState("");
   const add=async()=>{
     if(!form.nombre||!form.categoria){alert("Completá el Nombre y la Categoría antes de guardar (la Categoría no puede quedar vacía).");return;}
     const{error}=await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});
@@ -1298,7 +1314,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🛒 Acá registrás cada compra que hacés para el negocio. Elegís qué compraste, cuánto contenía y cuánto pagaste en total — la app calcula sola el precio por unidad y suma al Stock.</span>
       </div>
       <button className="bp" style={{background:"var(--accent)",marginBottom:16}} onClick={()=>{setOpenC(!openC);setPasoCompra(0);}}>📥 Registrar compra</button>
-       {openC&&(()=>{
+      {openC&&(()=>{
         return(
         <div className="card" style={{padding:20,marginBottom:16,borderColor:"var(--accent)"}}>
           <div style={{fontWeight:700,color:"var(--accent)",marginBottom:4}}>📥 Registrar nueva compra</div>
@@ -1673,7 +1689,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const porMedio=medio=>{
     const ventas=Number(totalesPorMetodoHoy[medio]||0);
     const extra=ingresosExtraHoy.filter(i=>i.metodo_pago===medio).reduce((s,i)=>s+Number(i.monto),0);
-    const egreso=gastosHoy.filter(g=>g.metodo_pago===medio).reduce((s,g)=>s+Number(g.monto),0);
+   const egreso=gastosHoy.filter(g=>g.metodo_pago===medio).reduce((s,g)=>s+Number(g.monto),0);
     return{ingreso:ventas+extra,egreso};
   };
   const medios=[...new Set(["efectivo","tarjeta","transferencia",...Object.keys(totalesPorMetodoHoy),...ingresosExtraHoy.map(i=>i.metodo_pago),...gastosHoy.map(g=>g.metodo_pago)])];
@@ -1690,7 +1706,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
     const totalVendido=cierresMes.reduce((s,c)=>s+Number(c.total_general),0);
     const ef=cierresMes.reduce((s,c)=>s+Number(c.total_efectivo),0);
     const tar=cierresMes.reduce((s,c)=>s+Number(c.total_tarjeta),0);
-   const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
+    const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
     const mesasCant=cierresMes.reduce((s,c)=>s+Number(c.cantidad_mesas),0);
     const cierreIds=cierresMes.map(c=>c.id);
     const{data:peds}=await sb.from("pedidos").select("*").in("cierre_id",cierreIds);
@@ -1898,7 +1914,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           const pagadoP=pagosP.reduce((s,pg)=>s+Number(pg.importe),0);
           const pendienteP=Math.max(0,Math.round((tot-pagadoP)*100)/100);
           const pagoAbiertoAqui=pagoAbierto===p.id;
-      return(
+          return(
           <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
             <div style={{cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -2082,7 +2098,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos con margen menor a {UMBRAL_MARGEN_BAJO}%</div>
         {margenBajo.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — margen {m.pct}% ({money(m.margen)})</div>)}
       </div>}
-      {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+            {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>📈 Productos cuyo costo subió</div>
         {productosCostoSubio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — costo {money(m.costoAnterior)} → {money(m.costoActual)} <span style={{fontWeight:700}}>(+{m.pct}%)</span></div>)}
       </div>}
