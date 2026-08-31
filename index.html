@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -293,11 +293,12 @@ function VistaRolPendiente({identidad,cambiar,logout}){
       </div>
     </div>
   );
+}
 
 function TopBar({titulo,identidad,cambiar,logout}){
   return(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"var(--surface)",borderBottom:"1px solid var(--line)"}}>
-      <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
+     <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <span style={{fontSize:15,color:"var(--ink-soft)",fontWeight:600}}>{identidad.nombre}</span>
         <button className="bg" style={{padding:"6px 10px",fontSize:14.5}} onClick={cambiar}>Cambiar</button>
@@ -498,7 +499,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
                       {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
                         <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
-                                                   {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                                                  {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
                         </button>
                       ))}
                     </div>
@@ -697,7 +698,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
     const productosVendidos=Object.entries(conteo).map(([nombre,d])=>{
       const mi=menu.find(m=>m.id===d.menu_item_id);
       const costoUnit=mi?costoItemVD(mi):0;
-      const costoLinea=costoUnit*d.cantidad;
+     const costoLinea=costoUnit*d.cantidad;
       costoTotal+=costoLinea;
       return{nombre,cantidad:d.cantidad,venta:d.venta,costo:Math.round(costoLinea)};
     }).sort((a,b)=>b.venta-a.venta);
@@ -897,8 +898,8 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
                       ))}
                     </div>}
                   </div>
-                );
-            })()}
+                         );
+              })()}
             </div>
           </div>
         ))}
@@ -1097,8 +1098,8 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
           <div style={{width:120}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Unidad</label>
-            <select className="field" value={recFactor} onChange={e=>setRecFactor(Number(e.target.value))}>
-                           {opts.map(o=><option key={o.label} value={o.factor}>{o.label}</option>)}
+           <select className="field" value={recFactor} onChange={e=>setRecFactor(Number(e.target.value))}>
+              {opts.map(o=><option key={o.label} value={o.factor}>{o.label}</option>)}
             </select>
           </div>
         ):<div style={{fontSize:14,color:"var(--ink-soft)",paddingBottom:10}}>{opts[0].label}</div>;})()}
@@ -1297,7 +1298,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
     await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:contenidoPorUnidad||ins?.contenido_presentacion}).eq("id",insumoId);
     await sb.from("compras").insert({user_id:userId,insumo_id:insumoId,cantidad:cant,precio_unitario:precio,proveedor:compra.proveedor.trim()||null});
     resetCompra();setOpenC(false);reload();
-  };
+    };
   const borrarCompra=async c=>{
     const nombreIns=insumos.find(i=>i.id===c.insumo_id)?.nombre||"este insumo";
     if(!confirm(`¿Borrar esta compra de ${nombreIns}? Se le va a restar del stock y se va a recalcular el precio.`))return;
@@ -1497,7 +1498,7 @@ function PanelStock({userId,insumos,reload}){
     if(error){
       if(confirm("Este insumo está usado en la receta de uno o más platos/bebidas, por eso no se puede borrar directo. ¿Querés borrarlo igual? (se va a sacar también de esas recetas)")){
         await sb.from("recetas").delete().eq("insumo_id",id);
-        const{error:error2}=await sb.from("insumos").delete().eq("id",id);
+       const{error:error2}=await sb.from("insumos").delete().eq("id",id);
         if(error2){alert("No se pudo borrar: "+error2.message);return;}
       }else return;
     }
@@ -1689,7 +1690,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const porMedio=medio=>{
     const ventas=Number(totalesPorMetodoHoy[medio]||0);
     const extra=ingresosExtraHoy.filter(i=>i.metodo_pago===medio).reduce((s,i)=>s+Number(i.monto),0);
-   const egreso=gastosHoy.filter(g=>g.metodo_pago===medio).reduce((s,g)=>s+Number(g.monto),0);
+    const egreso=gastosHoy.filter(g=>g.metodo_pago===medio).reduce((s,g)=>s+Number(g.monto),0);
     return{ingreso:ventas+extra,egreso};
   };
   const medios=[...new Set(["efectivo","tarjeta","transferencia",...Object.keys(totalesPorMetodoHoy),...ingresosExtraHoy.map(i=>i.metodo_pago),...gastosHoy.map(g=>g.metodo_pago)])];
@@ -1897,7 +1898,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
             <div style={{gridColumn:"1/-1",fontSize:14,color:"var(--ink-soft)",display:"flex",gap:16,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
               <span>💵 Efectivo: {money(resumenMes.ef)}</span>
               <span>💳 Tarjeta: {money(resumenMes.tar)}</span>
-              <span>🏦 Transf.: {money(resumenMes.tr)}</span>
+             <span>🏦 Transf.: {money(resumenMes.tr)}</span>
               <span>· {resumenMes.dias} día{resumenMes.dias!==1?"s":""} con cierre de caja</span>
             </div>
           </div>
@@ -2097,8 +2098,8 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
       {margenBajo.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos con margen menor a {UMBRAL_MARGEN_BAJO}%</div>
         {margenBajo.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — margen {m.pct}% ({money(m.margen)})</div>)}
-      </div>}
-            {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
+       </div>}
+      {productosCostoSubio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>📈 Productos cuyo costo subió</div>
         {productosCostoSubio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre} — costo {money(m.costoAnterior)} → {money(m.costoActual)} <span style={{fontWeight:700}}>(+{m.pct}%)</span></div>)}
       </div>}
