@@ -298,7 +298,7 @@ function ChatHilo({itemId,mensajes,autor,userId,reload}){
   const[texto,setTexto]=useState("");
   const msgs=mensajes.filter(m=>m.pedido_item_id===itemId);
   const enviar=async()=>{
-     if(!texto.trim())return;
+    if(!texto.trim())return;
     const t=texto.trim();setTexto("");
     await sb.from("mensajes_pedido").insert({pedido_item_id:itemId,autor,texto:t,user_id:userId});
     reload();
@@ -498,7 +498,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
               <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:19,marginBottom:4}}>{productoModal.nombre}</div>
               <div style={{fontSize:15,color:"var(--ink-soft)",marginBottom:16}}>{money(productoModal.precio)}</div>
               <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo quiere? (opcional)</label>
-               <input className="field" autoFocus value={aclModal} onChange={e=>setAclModal(e.target.value)} placeholder="ej: sin lechuga" style={{marginBottom:16}} onKeyDown={e=>e.key==="Enter"&&confirmarAgregar()}/>
+              <input className="field" autoFocus value={aclModal} onChange={e=>setAclModal(e.target.value)} placeholder="ej: sin lechuga" style={{marginBottom:16}} onKeyDown={e=>e.key==="Enter"&&confirmarAgregar()}/>
               <div style={{display:"flex",gap:10}}>
                 <button className="bg" style={{flex:1,padding:12}} onClick={()=>setProductoModal(null)}>Cancelar</button>
                 <button className="bp" style={{flex:1,padding:12}} onClick={confirmarAgregar}>➕ Agregar</button>
@@ -698,7 +698,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
       setResumen(data.resumen||"No se pudo generar el resumen.");
     }catch(e){setResumen("Error de conexión al generar el resumen.");}
     finally{setResumenLoading(false);}
-      };
+     };
   return(
     <div className="app-shell" style={{display:"flex",minHeight:"100vh"}}>
       <aside className="sidebar" style={{width:220,flexShrink:0,borderRight:"1px solid var(--line)",padding:"22px 14px",display:"flex",flexDirection:"column",gap:18,background:"var(--surface)"}}>
@@ -898,7 +898,7 @@ function ItemGastoFijo({userId,item,pagos,reload}){
   const[form,setForm]=useState(null);
   const[historialAbierto,setHistorialAbierto]=useState(false);
   const[guardando,setGuardando]=useState(false);
-   const historial=pagos.filter(p=>p.gasto_fijo_id===item.id).sort((a,b)=>b.fecha_pago<a.fecha_pago?-1:1);
+  const historial=pagos.filter(p=>p.gasto_fijo_id===item.id).sort((a,b)=>b.fecha_pago<a.fecha_pago?-1:1);
   const ultimoPago=historial[0];
   const pendiente=item.activo&&item.proxima_fecha_pago<=hoy();
   const abrirEdicion=()=>{
@@ -1099,7 +1099,12 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const[recForm,setRecForm]=useState({insumo_id:"",cantidad:""});
   const[recFactor,setRecFactor]=useState(1);
    const[busqueda,setBusqueda]=useState("");
-  const add=async()=>{if(!form.nombre||!form.categoria)return;await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();};
+  const add=async()=>{
+    if(!form.nombre||!form.categoria){alert("Completá el Nombre y la Categoría antes de guardar (la Categoría no puede quedar vacía).");return;}
+    const{error}=await sb.from("menu_items").insert({nombre:form.nombre,categoria:form.categoria,precio:Number(form.precio)||0,va_a_cocina:form.va_a_cocina,user_id:userId,usa_receta:form.usaReceta,costo_manual:form.usaReceta?null:(Number(form.costoManual)||0),margen_objetivo:form.margenObjetivo?Number(form.margenObjetivo):null});
+    if(error){alert("No se pudo guardar el ítem: "+error.message);return;}
+    setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();
+  };
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
   const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
@@ -1293,7 +1298,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🛒 Acá registrás cada compra que hacés para el negocio. Elegís qué compraste, cuánto contenía y cuánto pagaste en total — la app calcula sola el precio por unidad y suma al Stock.</span>
       </div>
       <button className="bp" style={{background:"var(--accent)",marginBottom:16}} onClick={()=>{setOpenC(!openC);setPasoCompra(0);}}>📥 Registrar compra</button>
-      {openC&&(()=>{
+       {openC&&(()=>{
         return(
         <div className="card" style={{padding:20,marginBottom:16,borderColor:"var(--accent)"}}>
           <div style={{fontWeight:700,color:"var(--accent)",marginBottom:4}}>📥 Registrar nueva compra</div>
@@ -1497,8 +1502,8 @@ function PanelStock({userId,insumos,reload}){
       </div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>{setOpenInicial(!openInicial);setPasoInicial(0);resetInicial();}}>📦 Cargar stock inicial</button>
       {openInicial&&(()=>{
-        return( 
-           <div className="card" style={{padding:20,marginBottom:16}}>
+        return(
+        <div className="card" style={{padding:20,marginBottom:16}}>
           <div style={{fontSize:19,fontWeight:800,color:"var(--primary-dark)",marginBottom:2}}>📦 Cargar stock inicial</div>
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:16}}>Paso {pasoInicial+1} de 3 — para productos que ya tenías en el negocio antes de usar MODULA. Esto NO se guarda como una compra, solo carga el stock y el costo de una.</div>
           {pasoInicial===0&&<div>
@@ -1685,7 +1690,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
     const totalVendido=cierresMes.reduce((s,c)=>s+Number(c.total_general),0);
     const ef=cierresMes.reduce((s,c)=>s+Number(c.total_efectivo),0);
     const tar=cierresMes.reduce((s,c)=>s+Number(c.total_tarjeta),0);
-    const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
+   const tr=cierresMes.reduce((s,c)=>s+Number(c.total_transferencia),0);
     const mesasCant=cierresMes.reduce((s,c)=>s+Number(c.cantidad_mesas),0);
     const cierreIds=cierresMes.map(c=>c.id);
     const{data:peds}=await sb.from("pedidos").select("*").in("cierre_id",cierreIds);
@@ -1697,8 +1702,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         const mi=menu.find(m=>m.id===i.menu_item_id);
         if(mi)costoTotal+=costoItemVD(mi)*i.cantidad;
       });
-              }
-       setResumenMes({totalVendido,ef,tar,tr,mesas:mesasCant,costoTotal:Math.round(costoTotal),margen:Math.round(totalVendido-costoTotal),dias:cierresMes.length});
+    }
+    setResumenMes({totalVendido,ef,tar,tr,mesas:mesasCant,costoTotal:Math.round(costoTotal),margen:Math.round(totalVendido-costoTotal),dias:cierresMes.length});
     setCargandoMes(false);
   };
   useEffect(()=>{if(meses.length&&!resumenMes)cargarResumenMes(meses[0]);},[cierres.length]);
@@ -1893,12 +1898,12 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           const pagadoP=pagosP.reduce((s,pg)=>s+Number(pg.importe),0);
           const pendienteP=Math.max(0,Math.round((tot-pagadoP)*100)/100);
           const pagoAbiertoAqui=pagoAbierto===p.id;
-          return(
+      return(
           <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
             <div style={{cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{fontWeight:700,fontSize:16}}>{abiertoAqui?"▾":"▸"} Mesa {p.mesa_numero}</div>
-             <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:18,color:"var(--primary-dark)"}}>{money(tot)}</div>
+                <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:18,color:"var(--primary-dark)"}}>{money(tot)}</div>
               </div>
               <div style={{fontSize:14,color:"var(--ink-soft)"}}>Mozo: {p.mozo_nombre||"—"}</div>
             </div>
@@ -2098,7 +2103,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           {menosRentables.map((m,idx)=>(
             <div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderTop:idx>0?"1px solid var(--line)":"none",fontSize:14.5}}>
               <span>{m.nombre}</span>
-               <span style={{fontWeight:700,color:m.margen<0?"var(--warn)":"var(--primary)"}}>{money(m.margen)} ({m.pct}%)</span>
+              <span style={{fontWeight:700,color:m.margen<0?"var(--warn)":"var(--primary)"}}>{money(m.margen)} ({m.pct}%)</span>
             </div>
           ))}
         </div>
