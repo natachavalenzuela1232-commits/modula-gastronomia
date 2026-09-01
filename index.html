@@ -291,7 +291,7 @@ function App(){
     loadAll();
     const saved=localStorage.getItem("modula_id");
     if(saved)try{setIdentidad(JSON.parse(saved));}catch{}
-    const canal=sb.channel("rt").on("postgres_changes",{event:"*",schema:"public",table:"pedido_items"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mesas"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"insumos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mensajes_pedido"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pagos_pedido"},()=>loadAll()).subscribe();
+   const canal=sb.channel("rt").on("postgres_changes",{event:"*",schema:"public",table:"pedido_items"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pedidos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mesas"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"insumos"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"mensajes_pedido"},()=>loadAll()).on("postgres_changes",{event:"*",schema:"public",table:"pagos_pedido"},()=>loadAll()).subscribe();
     return()=>sb.removeChannel(canal);
   },[session]);
 
@@ -474,7 +474,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
     await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",mesaSel.id);
     setPidiendoPago(false);setMesaId(null);reload();cargarCobrosHoy();
   };
-  const cats=[...new Set(menu.filter(m=>m.activo).map(m=>m.categoria))];
+  const normCat=s=>(s||"").trim().normalize("NFC");
+  const cats=[...new Map(menu.filter(m=>m.activo).map(m=>[normCat(m.categoria),m.categoria.trim()])).values()];
   const normalizar=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const menuFiltradoBusqueda=busquedaMenu.trim()?menu.filter(m=>m.activo&&normalizar(m.nombre).includes(normalizar(busquedaMenu))):[];
   const abrirModalProducto=m=>{setProductoModal(m);setAclModal("");};
@@ -496,7 +497,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
           <div className="card" style={{padding:16,marginBottom:16}}>
             <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
-            {itemsMesa.map(i=>(
+              {itemsMesa.map(i=>(
               <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div style={{flex:1}}>
@@ -529,7 +530,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
                   <div key={cat} style={{marginBottom:14}}>
                     <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
-                      {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
+                      {menu.filter(m=>normCat(m.categoria)===normCat(cat)&&m.activo).map(m=>(
                         <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
                           {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
                         </button>
@@ -697,8 +698,8 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
               ))}
             </div>
           ))}
-        </div>
-        </div>
+         </div>
+      </div>
     </div>
   );
 }
@@ -896,7 +897,7 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
             </div>
             <div style={{borderTop:"1px solid var(--line)",paddingTop:10}}>
               <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",marginBottom:6}}>💰 PAGO</div>
-              {pagoCfgId===e.id?(
+                          {pagoCfgId===e.id?(
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <div><label style={{fontSize:13,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto value={pagoCfgForm.monto} onChange={v=>setPagoCfgForm({...pagoCfgForm,monto:v})} placeholder="ej: 25000"/></div>
                   <div><label style={{fontSize:13,fontWeight:700,color:"var(--ink-soft)"}}>Frecuencia</label>
@@ -1097,7 +1098,7 @@ function PanelGastosFijos({userId,gastosFijos,pagosGastoFijo,configsPagoEmpleado
         </div>
         {form.frecuencia==="personalizado"&&<div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Cada cuántos días</label><input className="field" style={{width:100}} inputMode="numeric" value={form.frecuencia_dias} onChange={e=>setForm({...form,frecuencia_dias:e.target.value.replace(/\D/g,"")})} placeholder="ej: 10"/></div>}
         <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Fecha de inicio</label><input className="field" type="date" value={form.fecha_inicio} onChange={e=>setForm({...form,fecha_inicio:e.target.value})}/></div>
-        <div style={{flex:"1 1 200px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Observaciones (opcional)</label><input className="field" value={form.observaciones} onChange={e=>setForm({...form,observaciones:e.target.value})}/></div>
+     <div style={{flex:"1 1 200px"}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Observaciones (opcional)</label><input className="field" value={form.observaciones} onChange={e=>setForm({...form,observaciones:e.target.value})}/></div>
         <button className="bp" disabled={guardando} onClick={crear}>Guardar</button>
         <button className="bg" onClick={()=>setOpen(false)}>Cancelar</button>
       </div>}
@@ -1181,7 +1182,8 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
   const menuFiltrado=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const archivados=menu.filter(m=>m.archivado);
-  const cats=[...new Set(menuFiltrado.map(m=>m.categoria))];
+  const normCat=s=>(s||"").trim().normalize("NFC");
+  const cats=[...new Map(menuFiltrado.map(m=>[normCat(m.categoria),m.categoria.trim()])).values()];
   const costoItem=item=>costoProducto(item,recetas,insumos);
   const[verTabla,setVerTabla]=useState(false);
   const tablaRent=[...menu.filter(m=>!m.archivado)].map(m=>{const costo=costoItem(m);return{...m,costo,margen:costo==null?null:m.precio-costo};}).sort((a,b)=>(b.margen??-Infinity)-(a.margen??-Infinity));
@@ -1237,7 +1239,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
         <div key={cat} style={{marginBottom:22}}>
           <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:10}}>{cat.toUpperCase()}</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:12}}>
-            {menuFiltrado.filter(m=>m.categoria===cat).map(m=>{const costo=costoItem(m);const margen=costo==null?null:m.precio-costo;const pct=costo==null||m.precio<=0?null:Math.round(margen/m.precio*100);return(
+            {menuFiltrado.filter(m=>normCat(m.categoria)===normCat(cat)).map(m=>{const costo=costoItem(m);const margen=costo==null?null:m.precio-costo;const pct=costo==null||m.precio<=0?null:Math.round(margen/m.precio*100);return(
               <div key={m.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
                 {editId===m.id?(()=>{
                   const costoEdit=editForm.usaReceta?costoItem(m):(Number(editForm.costoManual)||0);
@@ -1295,10 +1297,10 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
 
 function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
-  const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
-  const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
+  const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];   
+    const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
   const[openC,setOpenC]=useState(false);
-   const[pasoCompra,setPasoCompra]=useState(0);
+  const[pasoCompra,setPasoCompra]=useState(0);
   const contenidoPorUnidad=compra.tipoMedida==="unidad"?(Number(compra.contenidoValor)||0):(Number(compra.contenidoValor)||0)*1000;
   const cantCompra=(Number(compra.cantidadPaquetes)||0)*contenidoPorUnidad;
   const totalCompra=Number(compra.precio_total)||0;
@@ -1691,7 +1693,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       await sb.from("pagos_pedido").insert({user_id:userId,pedido_id:p.id,metodo:metodoFinal,importe});
       setPagoForm({metodo:"efectivo",metodoOtro:"",importe:""});
       reload();
-      }finally{setRegistrandoPago(false);}
+    }finally{setRegistrandoPago(false);}
   };
   const borrarPagoCaja=async pg=>{if(!confirm("¿Borrar este pago registrado?"))return;await sb.from("pagos_pedido").delete().eq("id",pg.id);reload();};
   const[cierreAbierto,setCierreAbierto]=useState(null);
@@ -2097,7 +2099,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
     const comprasNecesarias=stockBajo.map(i=>({nombre:i.nombre,faltante:Math.max(i.stock_minimo-i.stock_actual,0),unidad:i.unidad}));
     try{
       const res=await fetch(`${SUPABASE_URL}/functions/v1/resumen-diario`,{
-          method:"POST",
+        method:"POST",
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({
           totalHoy:ventasHoy,mesasAtendidas:mesasAtendidasReal,productosVendidos,
@@ -2307,4 +2309,4 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html> 
+</html>
