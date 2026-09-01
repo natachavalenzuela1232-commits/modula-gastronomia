@@ -146,6 +146,7 @@ function Login(){
     setMsg("");setLoading(true);
     try{
       if(mode==="signin"){const{error}=await sb.auth.signInWithPassword({email,password:pw});if(error)throw error;}
+      else if(mode==="reset"){const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});if(error)throw error;setMsg("Listo, te mandamos un email con un link para elegir una nueva contraseña.");}
       else{const{error}=await sb.auth.signUp({email,password:pw});if(error)throw error;setMsg("¡Cuenta creada! Ya podés iniciar sesión.");setMode("signin");}
     }catch(e){setMsg(e.message||"Error, probá de nuevo.");}
     finally{setLoading(false);}
@@ -155,15 +156,44 @@ function Login(){
       <div className="card" style={{width:"100%",maxWidth:380,padding:32}}>
         <div style={{textAlign:"center",marginBottom:26}}>
           <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:24,color:"var(--primary-dark)"}}>MODULA <span style={{color:"var(--primary)"}}>Gastronomía</span></div>
-          <div style={{fontSize:15,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":"Creá la cuenta de tu negocio"}</div>
+          <div style={{fontSize:15,color:"var(--ink-soft)",marginTop:4}}>{mode==="signin"?"Iniciá sesión con la cuenta de tu negocio":mode==="reset"?"Te mandamos un link para elegir una nueva contraseña":"Creá la cuenta de tu negocio"}</div>
         </div>
         <div style={{marginBottom:12}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Email</label><input className="field" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="tunegocio@email.com"/></div>
-        <div style={{marginBottom:18}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><div style={{position:"relative"}}><input className="field" type={verPw?"text":"password"} style={{paddingRight:44}} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/><button type="button" onClick={()=>setVerPw(!verPw)} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,padding:8,color:"var(--ink-soft)"}} aria-label={verPw?"Ocultar contraseña":"Mostrar contraseña"}>{verPw?"🙈":"👁️"}</button></div></div>
+        {mode!=="reset"&&<div style={{marginBottom:18}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña</label><div style={{position:"relative"}}><input className="field" type={verPw?"text":"password"} style={{paddingRight:44}} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()}/><button type="button" onClick={()=>setVerPw(!verPw)} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,padding:8,color:"var(--ink-soft)"}} aria-label={verPw?"Ocultar contraseña":"Mostrar contraseña"}>{verPw?"🙈":"👁️"}</button></div></div>}
+        {mode==="signin"&&<div style={{textAlign:"right",marginBottom:18,marginTop:-10}}><a href="#" onClick={e=>{e.preventDefault();setMode("reset");setMsg("")}} style={{fontSize:13.5,color:"var(--ink-soft)"}}>¿Olvidaste tu contraseña?</a></div>}
         {msg&&<div style={{fontSize:15,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
-        <button className="bp" style={{width:"100%",padding:12}} onClick={submit} disabled={loading||!email||!pw}>{loading?"Un momento…":mode==="signin"?"Iniciar sesión":"Crear cuenta"}</button>
+        <button className="bp" style={{width:"100%",padding:12}} onClick={submit} disabled={loading||!email||(mode!=="reset"&&!pw)}>{loading?"Un momento…":mode==="signin"?"Iniciar sesión":mode==="reset"?"Enviar link":"Crear cuenta"}</button>
         <div style={{textAlign:"center",marginTop:16,fontSize:14}}>
-          {mode==="signin"?<span style={{color:"var(--ink-soft)"}}>¿Primera vez? <a href="#" onClick={e=>{e.preventDefault();setMode("signup");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Creá la cuenta</a></span>:<span style={{color:"var(--ink-soft)"}}>¿Ya tenés? <a href="#" onClick={e=>{e.preventDefault();setMode("signin");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Iniciá sesión</a></span>}
+          {mode==="signin"?<span style={{color:"var(--ink-soft)"}}>¿Primera vez? <a href="#" onClick={e=>{e.preventDefault();setMode("signup");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Creá la cuenta</a></span>:mode==="reset"?<span style={{color:"var(--ink-soft)"}}>¿Te acordaste? <a href="#" onClick={e=>{e.preventDefault();setMode("signin");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Iniciá sesión</a></span>:<span style={{color:"var(--ink-soft)"}}>¿Ya tenés? <a href="#" onClick={e=>{e.preventDefault();setMode("signin");setMsg("")}} style={{color:"var(--primary)",fontWeight:700}}>Iniciá sesión</a></span>}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function NuevaContraseña({onListo}){
+  const[pw,setPw]=useState("");
+  const[verPw,setVerPw]=useState(false);
+  const[loading,setLoading]=useState(false);
+  const[msg,setMsg]=useState("");
+  const guardar=async()=>{
+    if(pw.length<6){setMsg("La contraseña tiene que tener al menos 6 caracteres.");return;}
+    setLoading(true);setMsg("");
+    const{error}=await sb.auth.updateUser({password:pw});
+    setLoading(false);
+    if(error){setMsg(error.message);return;}
+    alert("¡Contraseña actualizada! Ya podés usarla para entrar.");
+    onListo();
+  };
+  return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"var(--bg)",padding:20}}>
+      <div className="card" style={{width:"100%",maxWidth:380,padding:32}}>
+        <div style={{textAlign:"center",marginBottom:26}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:22,color:"var(--primary-dark)"}}>Elegí tu nueva contraseña</div>
+        </div>
+        <div style={{marginBottom:18}}><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Contraseña nueva</label><div style={{position:"relative"}}><input className="field" type={verPw?"text":"password"} style={{paddingRight:44}} value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&guardar()}/><button type="button" onClick={()=>setVerPw(!verPw)} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,padding:8,color:"var(--ink-soft)"}} aria-label={verPw?"Ocultar contraseña":"Mostrar contraseña"}>{verPw?"🙈":"👁️"}</button></div></div>
+        {msg&&<div style={{fontSize:15,color:"var(--primary)",marginBottom:14,lineHeight:1.4}}>{msg}</div>}
+        <button className="bp" style={{width:"100%",padding:12}} onClick={guardar} disabled={loading||!pw}>{loading?"Un momento…":"Guardar contraseña"}</button>
       </div>
     </div>
   );
@@ -211,12 +241,13 @@ function SelectorIdentidad({empleados,config,onElegir}){
 function App(){
   const[session,setSession]=useState(undefined);
   const[identidad,setIdentidad]=useState(null);
+  const[recovery,setRecovery]=useState(false);
   const[data,setData]=useState({empleados:[],mesas:[],menu:[],pedidos:[],items:[],insumos:[],recetas:[],cierres:[],compras:[],mensajes:[],gastos:[],ingresosExtra:[],pagos:[],configsPagoEmpleado:[],pagosEmpleado:[],gastosFijos:[],pagosGastoFijo:[],config:{umbral_aumento_costo:15,umbral_margen_bajo:25}});
   const[loading,setLoading]=useState(true);
 
   useEffect(()=>{
     sb.auth.getSession().then(({data})=>setSession(data.session));
-    const{data:l}=sb.auth.onAuthStateChange((_,s)=>setSession(s));
+    const{data:l}=sb.auth.onAuthStateChange((evt,s)=>{if(evt==="PASSWORD_RECOVERY")setRecovery(true);setSession(s);});
     return()=>l.subscription.unsubscribe();
   },[]);
 
@@ -269,6 +300,7 @@ function App(){
   const logout=async()=>{localStorage.removeItem("modula_id");await sb.auth.signOut();};
 
   if(session===undefined)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando…</div>;
+  if(recovery)return<NuevaContraseña onListo={()=>setRecovery(false)}/>;
   if(!session)return<Login/>;
   if(loading)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--ink-soft)"}}>Cargando el negocio…</div>;
   if(!identidad)return<SelectorIdentidad empleados={data.empleados} config={data.config} onElegir={elegir}/>;
@@ -298,7 +330,7 @@ function VistaRolPendiente({identidad,cambiar,logout}){
 function TopBar({titulo,identidad,cambiar,logout}){
   return(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"var(--surface)",borderBottom:"1px solid var(--line)"}}>
-     <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
+      <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)"}}>{titulo}</div>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <span style={{fontSize:15,color:"var(--ink-soft)",fontWeight:600}}>{identidad.nombre}</span>
         <button className="bg" style={{padding:"6px 10px",fontSize:14.5}} onClick={cambiar}>Cambiar</button>
@@ -497,7 +529,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
                   <div key={cat} style={{marginBottom:14}}>
                     <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
-                                           {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
+                      {menu.filter(m=>m.categoria===cat&&m.activo).map(m=>(
                         <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
                           {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
                         </button>
@@ -666,7 +698,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
             </div>
           ))}
         </div>
-      </div>
+        </div>
     </div>
   );
 }
@@ -898,7 +930,7 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
                       {!historial.length&&<div style={{color:"var(--ink-soft)"}}>Sin pagos registrados todavía.</div>}
                       {historial.map(h=>(
                         <div key={h.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 0"}}>
-                                               <span>{h.fecha_pago}</span><span style={{fontWeight:700}}>{money(h.monto)}</span>
+                          <span>{h.fecha_pago}</span><span style={{fontWeight:700}}>{money(h.monto)}</span>
                         </div>
                       ))}
                     </div>}
@@ -1098,7 +1130,7 @@ function RecetaEditor({item,recetas,insumos,recForm,setRecForm,recFactor,setRecF
           <select className="field" value={recForm.insumo_id} onChange={e=>{setRecForm({...recForm,insumo_id:e.target.value});setRecFactor(1);}}>
             <option value="">Elegir…</option>
             {insumos.map(i=><option key={i.id} value={i.id}>{i.nombre}</option>)}
-            </select>
+          </select>
         </div>
         <div style={{width:100}}><label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>Cantidad</label><input className="field" inputMode="decimal" value={recForm.cantidad} onChange={e=>setRecForm({...recForm,cantidad:e.target.value.replace(",",".").replace(/[^0-9.]/g,"")})} placeholder="ej: 200"/></div>
         {recForm.insumo_id&&(()=>{const opts=opcionesUnidad(insumos.find(i=>i.id===recForm.insumo_id)?.unidad);return opts.length>1?(
@@ -1266,7 +1298,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
   const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
   const[openC,setOpenC]=useState(false);
-  const[pasoCompra,setPasoCompra]=useState(0);
+   const[pasoCompra,setPasoCompra]=useState(0);
   const contenidoPorUnidad=compra.tipoMedida==="unidad"?(Number(compra.contenidoValor)||0):(Number(compra.contenidoValor)||0)*1000;
   const cantCompra=(Number(compra.cantidadPaquetes)||0)*contenidoPorUnidad;
   const totalCompra=Number(compra.precio_total)||0;
@@ -1297,7 +1329,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
       const{data:nuevo,error}=await sb.from("insumos").insert({nombre:compra.nombre.trim(),unidad:compra.tipoMedida,presentacion:presentacionFinal,contenido_presentacion:contenidoPorUnidad||null,stock_actual:0,stock_minimo:1,precio_compra:0,user_id:userId}).select().single();
       if(error||!nuevo)return;
       insumoId=nuevo.id;
-     }
+    }
     const ins=insumos.find(i=>i.id===insumoId);
     const stockPrevio=ins?Number(ins.stock_actual):0;
     await sb.from("insumos").update({stock_actual:stockPrevio+cant,precio_compra:precio||(ins?.precio_compra||0),contenido_presentacion:contenidoPorUnidad||ins?.contenido_presentacion}).eq("id",insumoId);
@@ -1659,7 +1691,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       await sb.from("pagos_pedido").insert({user_id:userId,pedido_id:p.id,metodo:metodoFinal,importe});
       setPagoForm({metodo:"efectivo",metodoOtro:"",importe:""});
       reload();
-    }finally{setRegistrandoPago(false);}
+      }finally{setRegistrandoPago(false);}
   };
   const borrarPagoCaja=async pg=>{if(!confirm("¿Borrar este pago registrado?"))return;await sb.from("pagos_pedido").delete().eq("id",pg.id);reload();};
   const[cierreAbierto,setCierreAbierto]=useState(null);
@@ -1668,7 +1700,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const[gastoForm,setGastoForm]=useState({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});
   const[openGasto,setOpenGasto]=useState(false);
   const agregarGasto=async()=>{
-  if(!gastoForm.monto||Number(gastoForm.monto)<=0)return;
+    if(!gastoForm.monto||Number(gastoForm.monto)<=0)return;
     await sb.from("gastos").insert({user_id:userId,categoria:gastoForm.categoria,monto:Number(gastoForm.monto),metodo_pago:gastoForm.metodo_pago,descripcion:gastoForm.descripcion.trim()||null});
     setGastoForm({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});setOpenGasto(false);reload();
   };
@@ -2065,7 +2097,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
     const comprasNecesarias=stockBajo.map(i=>({nombre:i.nombre,faltante:Math.max(i.stock_minimo-i.stock_actual,0),unidad:i.unidad}));
     try{
       const res=await fetch(`${SUPABASE_URL}/functions/v1/resumen-diario`,{
-        method:"POST",
+          method:"POST",
         headers:{"Content-Type":"application/json","Authorization":`Bearer ${SUPABASE_KEY}`,"apikey":SUPABASE_KEY},
         body:JSON.stringify({
           totalHoy:ventasHoy,mesasAtendidas:mesasAtendidasReal,productosVendidos,
@@ -2098,7 +2130,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
       {sinPrecio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos sin precio todavía</div>
         <div style={{fontSize:13.5,color:"var(--warn)",marginBottom:6}}>Todavía no se puede calcular el margen — falta comprar algún ingrediente de la receta.</div>
-               {sinPrecio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre}</div>)}
+        {sinPrecio.map(m=><div key={m.id} style={{fontSize:14.5,padding:"3px 0"}}>• {m.nombre}</div>)}
       </div>}
       {margenBajo.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos con margen menor a {UMBRAL_MARGEN_BAJO}%</div>
@@ -2170,12 +2202,24 @@ function PanelConfiguracion({userId,config,reload}){
     await sb.from("configuracion").upsert({user_id:userId,umbral_aumento_costo:Number(form.umbral_aumento_costo)||15,umbral_margen_bajo:Number(form.umbral_margen_bajo)||25,pin_dueno:form.pin_dueno.trim()||null,updated_at:new Date().toISOString()});
     setGuardado(true);setTimeout(()=>setGuardado(false),2500);reload();
   };
+  const[pwNueva,setPwNueva]=useState("");
+  const[verPwNueva,setVerPwNueva]=useState(false);
+  const[cambiandoPw,setCambiandoPw]=useState(false);
+  const[msgPw,setMsgPw]=useState("");
+  const cambiarContraseña=async()=>{
+    if(pwNueva.length<6){setMsgPw("Tiene que tener al menos 6 caracteres.");return;}
+    setCambiandoPw(true);setMsgPw("");
+    const{error}=await sb.auth.updateUser({password:pwNueva});
+    setCambiandoPw(false);
+    if(error){setMsgPw(error.message);return;}
+    setMsgPw("✓ Contraseña actualizada.");setPwNueva("");
+  };
   return(
     <div>
       <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>⚙️ Acá ajustás los números que la app usa para avisarte de cosas automáticamente.</span>
       </div>
-      <div className="card" style={{padding:18,maxWidth:420}}>
+      <div className="card" style={{padding:18,maxWidth:420,marginBottom:16}}>
         <div style={{marginBottom:16}}>
           <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>PIN para entrar como dueño/a</label>
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:6}}>Si lo dejás vacío, cualquiera puede tocar "Soy el dueño/a" sin PIN. Con un PIN puesto, se va a pedir antes de dejar entrar a ver costos, márgenes y caja.</div>
@@ -2193,6 +2237,13 @@ function PanelConfiguracion({userId,config,reload}){
         </div>
         <button className="bp" onClick={guardar}>Guardar</button>
         {guardado&&<span style={{marginLeft:12,color:"var(--accent)",fontWeight:700,fontSize:14.5}}>✓ Guardado</span>}
+      </div>
+      <div className="card" style={{padding:18,maxWidth:420}}>
+        <label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Cambiar contraseña de acceso</label>
+        <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:10}}>Es la contraseña con la que entrás con tu email al principio (no el PIN de arriba).</div>
+        <div style={{position:"relative",marginBottom:10}}><input className="field" type={verPwNueva?"text":"password"} style={{paddingRight:44}} value={pwNueva} onChange={e=>setPwNueva(e.target.value)} placeholder="Contraseña nueva"/><button type="button" onClick={()=>setVerPwNueva(!verPwNueva)} style={{position:"absolute",right:4,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:18,padding:8,color:"var(--ink-soft)"}} aria-label={verPwNueva?"Ocultar contraseña":"Mostrar contraseña"}>{verPwNueva?"🙈":"👁️"}</button></div>
+        <button className="bp" onClick={cambiarContraseña} disabled={cambiandoPw||!pwNueva}>{cambiandoPw?"Un momento…":"Cambiar contraseña"}</button>
+        {msgPw&&<div style={{marginTop:10,fontSize:14.5,color:"var(--primary)"}}>{msgPw}</div>}
       </div>
     </div>
   );
@@ -2256,4 +2307,4 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
-</html>
+</html> 
