@@ -698,7 +698,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
               ))}
             </div>
           ))}
-          </div>
+</div>
       </div>
     </div>
   );
@@ -898,7 +898,7 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
       </div>
     </div>
   );
- }
+  }
 
 function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,reload}){
   const[form,setForm]=useState({nombre:"",rol:"mozo",pin:""});
@@ -1098,7 +1098,7 @@ function ItemGastoFijo({userId,item,pagos,reload}){
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",borderTop:"1px solid var(--line)",paddingTop:10}}>
         <button className="bp" style={{fontSize:13,padding:"6px 10px"}} onClick={registrarPago}>Registrar pago</button>
-        <button className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={abrirEdicion}>✏️ Editar</button>
+       <button className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={abrirEdicion}>✏️ Editar</button>
         <button className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={toggleActivo}>{item.activo?"Desactivar":"Activar"}</button>
         <button className="bg" style={{fontSize:13,padding:"6px 10px"}} onClick={()=>setHistorialAbierto(!historialAbierto)}>{historialAbierto?"Ocultar historial":`Historial (${historial.length})`}</button>
         <button className="bg" style={{fontSize:13,padding:"6px 8px"}} onClick={eliminar}>🗑</button>
@@ -1668,7 +1668,7 @@ function PanelStock({userId,insumos,reload}){
                 <button type="button" className={inicial.tipoMedida==="gramos"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"gramos"})}>⚖️ Se pesa (por kilo)</button>
                 <button type="button" className={inicial.tipoMedida==="mililitros"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"mililitros"})}>💧 Es líquido (por litro)</button>
                 <button type="button" className={inicial.tipoMedida==="unidad"?"bp":"bg"} style={{fontSize:13.5,padding:"8px 12px"}} onClick={()=>setInicial({...inicial,tipoMedida:"unidad"})}>🔢 Se cuenta (unidad)</button>
-              </div>
+                </div>
             </div>}
             <div style={{marginBottom:16}}>
               <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿En qué venía?</label>
@@ -1895,10 +1895,10 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         mesasCant++;
       }
       if(aCerrarAhora.length===0&&(!sueltos||!sueltos.length)){
-        alert(mesasSinPagoCompleto.length?`Ninguna mesa está totalmente pagada todavía (pendientes: Mesa ${mesasSinPagoCompleto.join(", Mesa ")}).`:"No hay ninguna mesa para cerrar. La caja ya está al día.");
+             alert(mesasSinPagoCompleto.length?`Ninguna mesa está totalmente pagada todavía (pendientes: Mesa ${mesasSinPagoCompleto.join(", Mesa ")}).`:"No hay ninguna mesa para cerrar. La caja ya está al día.");
         return;
-  }
-   const total=Object.values(totalesPorMetodo).reduce((s,v)=>s+v,0);
+      }
+      const total=Object.values(totalesPorMetodo).reduce((s,v)=>s+v,0);
       const ef=totalesPorMetodo["efectivo"]||0,tar=totalesPorMetodo["tarjeta"]||0,tr=totalesPorMetodo["transferencia"]||0;
       const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant,totales_por_metodo:totalesPorMetodo}).select().single();
       for(const p of aCerrarAhora){
@@ -2097,7 +2097,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(   
+        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return( 
       <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
@@ -2176,22 +2176,43 @@ function GraficoDonut({segmentos}){
   );
 }
 
-function GraficoBarrasRentabilidad({productos}){
-  if(!productos.length)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay productos con margen calculado.</div>;
-  const max=Math.max(...productos.map(p=>Math.abs(p.margen)),1);
+function GraficoTortaRentabilidad({productos}){
+  const activos=productos.filter(p=>p.margen>0).sort((a,b)=>b.margen-a.margen);
+  if(!activos.length)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay productos con margen calculado.</div>;
+  const PALETA=["#2F7D5F","#4F9D7A","#7BB99A","#C99A3D","#D9B66B","#A9673B","#8E5B9C","#5C7DBA","#4A9BB0","#B0555F"];
+  const total=activos.reduce((s,p)=>s+p.margen,0);
+  const cx=100,cy=100,R=88;
+  let anguloAcum=-90;
+  const slices=activos.map((p,i)=>{
+    const frac=p.margen/total;
+    const anguloIni=anguloAcum;
+    const anguloFin=anguloAcum+frac*360;
+    anguloAcum=anguloFin;
+    const rad=g=>(g*Math.PI)/180;
+    const x1=cx+R*Math.cos(rad(anguloIni)),y1=cy+R*Math.sin(rad(anguloIni));
+    const x2=cx+R*Math.cos(rad(anguloFin)),y2=cy+R*Math.sin(rad(anguloFin));
+    const largeArc=anguloFin-anguloIni>180?1:0;
+    const d=activos.length===1?`M ${cx} ${cy-R} A ${R} ${R} 0 1 1 ${cx-0.01} ${cy-R} Z`:`M ${cx} ${cy} L ${x1} ${y1} A ${R} ${R} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+    return{...p,d,color:PALETA[i%PALETA.length],frac};
+  });
   return(
-    <div style={{maxHeight:280,overflowY:"auto",padding:"4px 2px"}}>
-      {productos.map((p,i)=>{const pct=Math.max(Math.abs(p.margen)/max*100,2);return(
-        <div key={p.id||i} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
-          <div style={{width:110,fontSize:13,color:"var(--ink)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={p.nombre}>{p.nombre}</div>
-          <div style={{flex:1,background:"var(--surface-2)",borderRadius:8,height:14,position:"relative"}}>
-            <div style={{width:`${pct}%`,height:"100%",borderRadius:8,background:p.margen<0?"var(--warn)":"var(--accent)"}}>
-              <title>{p.nombre}: {money(p.margen)}</title>
-            </div>
+    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:22}}>
+      <svg viewBox="0 0 200 200" style={{width:190,height:190,flexShrink:0}}>
+        {slices.map((s,i)=>(
+          <path key={s.id||i} d={s.d} fill={s.color} stroke="var(--surface)" strokeWidth="1.5">
+            <title>{s.nombre}: {money(s.margen)} ({Math.round(s.frac*100)}%)</title>
+          </path>
+        ))}
+      </svg>
+      <div style={{display:"flex",flexDirection:"column",gap:8,flex:1,minWidth:150,maxHeight:220,overflowY:"auto"}}>
+        {slices.map((s,i)=>(
+          <div key={s.id||i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5}}>
+            <span style={{width:11,height:11,borderRadius:4,background:s.color,flexShrink:0}}/>
+            <span style={{color:"var(--ink)",fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={s.nombre}>{s.nombre}</span>
+            <span style={{color:"var(--ink-soft)",fontWeight:700}}>{money(s.margen)}</span>
           </div>
-          <div style={{width:76,fontSize:12.5,fontWeight:700,textAlign:"right",color:p.margen<0?"var(--warn)":"var(--accent)"}}>{money(p.margen)}</div>
-        </div>
-      );})}
+        ))}
+      </div>
     </div>
   );
 }
@@ -2277,7 +2298,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
     const mesasAtendidasReal=cierreHoy?cierreHoy.cantidad_mesas:mesas.filter(m=>m.estado==="ocupada").length;
     const productosVendidos=tabla.filter(m=>conVentaHoy.has(m.id)).map(m=>{
-      const cant=itemsHoy.filter(i=>i.menu_item_id===m.id).reduce((s,i)=>s+i.cantidad,0);
+    const cant=itemsHoy.filter(i=>i.menu_item_id===m.id).reduce((s,i)=>s+i.cantidad,0);
       return{nombre:m.nombre,cantidad:cant,venta:cant*Number(m.precio),costo:Math.round(cant*m.costo)};
     }).sort((a,b)=>b.venta-a.venta);
     const comprasNecesarias=stockBajo.map(i=>({nombre:i.nombre,faltante:Math.max(i.stock_minimo-i.stock_actual,0),unidad:i.unidad}));
@@ -2320,7 +2341,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
         </div>
         <div className="card" style={{padding:18}}>
           <div style={{fontSize:16,fontWeight:800,color:"var(--ink-soft)",marginBottom:14}}>RENTABILIDAD POR PRODUCTO</div>
-          <GraficoBarrasRentabilidad productos={tablaConMargen}/>
+          <GraficoTortaRentabilidad productos={tablaConMargen}/>
         </div>
       </div>
       <div className="card" style={{padding:18,marginBottom:22}}>
@@ -2498,7 +2519,7 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
           {margenBajo.slice(0,4).map(m=><div key={m.id} style={{fontSize:14,padding:"2px 0"}}>• {m.nombre} ({m.pct}%)</div>)}
           {margenBajo.length>4&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>+{margenBajo.length-4} más — ver Resultados</div>}
         </div>
-        </div>
+      </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         <button className="bg" onClick={()=>irA("mesas")}>🍽️ Ir a Mesas</button>
         <button className="bg" onClick={()=>irA("caja")}>💰 Ir a Caja</button>
