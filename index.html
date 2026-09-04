@@ -697,7 +697,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
                 </div>
               ))}
             </div>
-          ))}  
+          ))}
           </div>
       </div>
     </div>
@@ -709,7 +709,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"inicio");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const pendientesGastosFijos=configsPagoEmpleado.filter(c=>c.proxima_fecha_pago<=hoy()).length+gastosFijos.filter(g=>g.activo&&g.proxima_fecha_pago<=hoy()).length;
-  const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"gastosfijos",label:"Gastos fijos",icon:"🧾"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
+  const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"pedidos",label:"Pedidos",icon:"🧾"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"gastosfijos",label:"Gastos fijos",icon:"🧾"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
@@ -776,6 +776,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {resumen&&<div className="card" style={{padding:18,marginBottom:22,lineHeight:1.6,fontSize:14.5}}>{resumen}</div>}
         {tab==="inicio"&&<PanelInicio identidad={identidad} mesas={mesas} items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} config={config} cierres={cierres} irA={setTab}/>}
         {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
+        {tab==="pedidos"&&<PanelPedidos userId={userId}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} configsPagoEmpleado={configsPagoEmpleado} pagosEmpleado={pagosEmpleado} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
         {tab==="compras"&&<PanelCompras userId={userId} insumos={insumos} compras={compras} recetas={recetas} menu={menu} config={config} reload={reload}/>}
@@ -785,6 +786,93 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         {tab==="resultados"&&<PanelResultados items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} compras={compras} config={config} mesas={mesas} cierres={cierres}/>}
         {tab==="config"&&<PanelConfiguracion userId={userId} config={config} reload={reload}/>}
       </main>
+    </div>
+  );
+}
+
+function PanelPedidos({userId}){
+  const[periodo,setPeriodo]=useState("hoy");
+  const[desdeManual,setDesdeManual]=useState(hoy());
+  const[hastaManual,setHastaManual]=useState(hoy());
+  const[pedidosPeriodo,setPedidosPeriodo]=useState([]);
+  const[itemsPeriodo,setItemsPeriodo]=useState([]);
+  const[cargando,setCargando]=useState(true);
+  const[abiertoId,setAbiertoId]=useState(null);
+  const fmt=d=>d.toISOString().slice(0,10);
+  const rango=()=>{
+    const base=new Date();
+    if(periodo==="hoy")return{desde:fmt(base),hasta:fmt(base)};
+    if(periodo==="ayer"){const a=new Date(base);a.setDate(a.getDate()-1);return{desde:fmt(a),hasta:fmt(a)};}
+    if(periodo==="semana"){const a=new Date(base);a.setDate(a.getDate()-6);return{desde:fmt(a),hasta:fmt(base)};}
+    if(periodo==="mes"){const a=new Date(base);a.setDate(a.getDate()-29);return{desde:fmt(a),hasta:fmt(base)};}
+    return{desde:desdeManual,hasta:hastaManual};
+  };
+  useEffect(()=>{
+    (async()=>{
+      setCargando(true);
+      const{desde,hasta}=rango();
+      const{data:peds}=await sb.from("pedidos").select("*").eq("user_id",userId).gte("created_at",desde+"T00:00:00").lte("created_at",hasta+"T23:59:59").order("created_at",{ascending:false});
+      setPedidosPeriodo(peds||[]);
+      if(peds&&peds.length){
+        const{data:its}=await sb.from("pedido_items").select("*").in("pedido_id",peds.map(p=>p.id));
+        setItemsPeriodo(its||[]);
+      }else setItemsPeriodo([]);
+      setCargando(false);
+    })();
+  },[periodo,desdeManual,hastaManual]);
+  const totalItem=i=>Number(i.precio)*(i.cantidad||1);
+  const totalPedido=p=>{
+    if(p.estado==="cerrada"&&p.total!=null)return Number(p.total);
+    return itemsPeriodo.filter(i=>i.pedido_id===p.id).reduce((s,i)=>s+totalItem(i),0);
+  };
+  const totalPeriodo=pedidosPeriodo.reduce((s,p)=>s+totalPedido(p),0);
+  const PERIODOS=[{id:"hoy",label:"Hoy"},{id:"ayer",label:"Ayer"},{id:"semana",label:"Esta semana"},{id:"mes",label:"Este mes"},{id:"personalizado",label:"Personalizado"}];
+  return(
+    <div>
+      <div className="card" style={{padding:"12px 16px",marginBottom:16,background:"var(--surface-2)",border:"none"}}>
+        <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>🧾 Consultá los pedidos por período: mesa, mozo, hora, productos, total y estado.</span>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
+        {PERIODOS.map(p=><button key={p.id} className={periodo===p.id?"bp":"bg"} style={{fontSize:14,padding:"8px 14px"}} onClick={()=>setPeriodo(p.id)}>{p.label}</button>)}
+      </div>
+      {periodo==="personalizado"&&<div style={{display:"flex",gap:10,alignItems:"flex-end",marginBottom:16,flexWrap:"wrap"}}>
+        <div><label style={{fontSize:13,color:"var(--ink-soft)",display:"block",marginBottom:4}}>Desde</label><input className="field" type="date" value={desdeManual} onChange={e=>setDesdeManual(e.target.value)}/></div>
+        <div><label style={{fontSize:13,color:"var(--ink-soft)",display:"block",marginBottom:4}}>Hasta</label><input className="field" type="date" value={hastaManual} onChange={e=>setHastaManual(e.target.value)}/></div>
+      </div>}
+      <div className="card" style={{padding:16,marginBottom:16}}>
+        <div style={{fontSize:14.5,color:"var(--ink-soft)",fontWeight:700}}>{pedidosPeriodo.length} pedido{pedidosPeriodo.length!==1?"s":""} · Total: <span style={{color:"var(--primary-dark)"}}>{money(totalPeriodo)}</span></div>
+      </div>
+      {cargando&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Cargando…</div>}
+      {!cargando&&!pedidosPeriodo.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>No hay pedidos en este período.</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {pedidosPeriodo.map(p=>{
+          const its=itemsPeriodo.filter(i=>i.pedido_id===p.id);
+          const abierto=abiertoId===p.id;
+          return(
+            <div key={p.id} className="card" style={{padding:14}}>
+              <div onClick={()=>setAbiertoId(abierto?null:p.id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",gap:10}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15}}>{abierto?"▾":"▸"} Mesa {p.mesa_numero}</div>
+                  <div style={{fontSize:13,color:"var(--ink-soft)"}}>{p.mozo_nombre||"—"} · {hora(p.created_at)}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontWeight:700,color:"var(--primary-dark)"}}>{money(totalPedido(p))}</div>
+                  <span className="tag" style={{background:p.estado==="cerrada"?"var(--accent-tint)":"var(--primary-tint)",color:p.estado==="cerrada"?"var(--accent)":"var(--primary)"}}>{p.estado==="cerrada"?"Cerrada":"Abierta"}</span>
+                </div>
+              </div>
+              {abierto&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--line)"}}>
+                {its.map(i=>(
+                  <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:14,padding:"3px 0"}}>
+                    <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</span>
+                    <span>{money(i.precio)}</span>
+                  </div>
+                ))}
+                {!its.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Sin ítems.</div>}
+              </div>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -810,7 +898,7 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
       </div>
     </div>
   );
-}
+ }
 
 function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,reload}){
   const[form,setForm]=useState({nombre:"",rol:"mozo",pin:""});
@@ -897,7 +985,7 @@ function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,relo
             </div>
             <div style={{borderTop:"1px solid var(--line)",paddingTop:10}}>
               <div style={{fontSize:13.5,fontWeight:800,color:"var(--ink-soft)",marginBottom:6}}>💰 PAGO</div>
-                          {pagoCfgId===e.id?(
+              {pagoCfgId===e.id?(
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   <div><label style={{fontSize:13,fontWeight:700,color:"var(--ink-soft)"}}>Monto</label><CampoMonto value={pagoCfgForm.monto} onChange={v=>setPagoCfgForm({...pagoCfgForm,monto:v})} placeholder="ej: 25000"/></div>
                   <div><label style={{fontSize:13,fontWeight:700,color:"var(--ink-soft)"}}>Frecuencia</label>
@@ -1210,7 +1298,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
               </tr>
             ))}
-          </tbody>
+            </tbody>
         </table>
       </div>}
       {open&&(()=>{
@@ -1298,7 +1386,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
 function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
   const num=v=>v.replace(",",".").replace(/[^0-9.]/g,"");
   const PRESENTACIONES=["Paquete","Botella","Bolsa","Caja","Cajón","Docena","Sachet","Otro"];
-    const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
+  const[compra,setCompra]=useState({nombre:"",insumo_id:"",esNuevo:false,tipoMedida:"gramos",presentacion:"Paquete",presentacionOtro:"",cantidadPaquetes:"1",contenidoValor:"",precio_total:"",proveedor:""});
   const[openC,setOpenC]=useState(false);
   const[pasoCompra,setPasoCompra]=useState(0);
   const contenidoPorUnidad=compra.tipoMedida==="unidad"?(Number(compra.contenidoValor)||0):(Number(compra.contenidoValor)||0)*1000;
@@ -1809,8 +1897,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       if(aCerrarAhora.length===0&&(!sueltos||!sueltos.length)){
         alert(mesasSinPagoCompleto.length?`Ninguna mesa está totalmente pagada todavía (pendientes: Mesa ${mesasSinPagoCompleto.join(", Mesa ")}).`:"No hay ninguna mesa para cerrar. La caja ya está al día.");
         return;
-      }
-      const total=Object.values(totalesPorMetodo).reduce((s,v)=>s+v,0);
+  }
+   const total=Object.values(totalesPorMetodo).reduce((s,v)=>s+v,0);
       const ef=totalesPorMetodo["efectivo"]||0,tar=totalesPorMetodo["tarjeta"]||0,tr=totalesPorMetodo["transferencia"]||0;
       const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant,totales_por_metodo:totalesPorMetodo}).select().single();
       for(const p of aCerrarAhora){
@@ -2009,8 +2097,8 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
-          <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+        {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(   
+      <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{fontWeight:700,fontSize:16}}>{cAbierto?"▾":"▸"} Caja del {c.fecha}</div>
@@ -2051,55 +2139,38 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   );
 }
 
-function GraficoLineas({datos}){
-  if(datos.length<2)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay suficientes cierres de caja para mostrar la evolución.</div>;
-  const W=640,H=200,padL=54,padR=16,padT=16,padB=30;
-  const max=Math.max(...datos.map(d=>d.valor),1);
-  const min=Math.min(...datos.map(d=>d.valor),0);
-  const rango=(max-min)||1;
-  const x=i=>padL+(i/(datos.length-1))*(W-padL-padR);
-  const y=v=>padT+(1-(v-min)/rango)*(H-padT-padB);
-  const puntos=datos.map((d,i)=>`${x(i)},${y(d.valor)}`).join(" ");
-  const area=`${padL},${y(min)} ${puntos} ${x(datos.length-1)},${y(min)}`;
-  const paso=Math.max(1,Math.ceil(datos.length/6));
+function GraficoDonut({segmentos}){
+  const total=segmentos.reduce((s,x)=>s+x.valor,0);
+  if(total<=0)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay cierres de caja con montos cargados.</div>;
+  const R=64,C=2*Math.PI*R,cx=100,cy=100;
+  let acc=0;
+  const activos=segmentos.filter(s=>s.valor>0);
   return(
-    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
-      {[0,.25,.5,.75,1].map(f=>{const yy=padT+f*(H-padT-padB);return<line key={f} x1={padL} y1={yy} x2={W-padR} y2={yy} stroke="var(--line)" strokeWidth="1"/>;})}
-      <polygon points={area} fill="var(--primary-tint)" opacity=".6"/>
-      <polyline points={puntos} fill="none" stroke="var(--primary)" strokeWidth="2.5"/>
-      {datos.map((d,i)=><circle key={i} cx={x(i)} cy={y(d.valor)} r="3.5" fill="var(--primary)"/>)}
-      <text x={padL-8} y={y(max)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">{money(max)}</text>
-      <text x={padL-8} y={y(min)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">{money(min)}</text>
-      {datos.map((d,i)=>i%paso===0?<text key={i} x={x(i)} y={H-8} textAnchor="middle" fontSize="10.5" fill="var(--ink-soft)">{d.label}</text>:null)}
-    </svg>
-  );
-}
-
-function GraficoBarrasAgrupadas({datos}){
-  if(!datos.length)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay datos suficientes para comparar ventas y gastos.</div>;
-  const W=640,H=200,padL=54,padR=16,padT=16,padB=30;
-  const max=Math.max(...datos.map(d=>Math.max(d.ventas,d.gastos)),1);
-  const groupW=(W-padL-padR)/datos.length;
-  const barW=Math.min(18,groupW/3);
-  const y=v=>padT+(1-v/max)*(H-padT-padB);
-  const paso=Math.max(1,Math.ceil(datos.length/6));
-  return(
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
-        {[0,.25,.5,.75,1].map(f=>{const yy=padT+f*(H-padT-padB);return<line key={f} x1={padL} y1={yy} x2={W-padR} y2={yy} stroke="var(--line)" strokeWidth="1"/>;})}
-        {datos.map((d,i)=>{const cx=padL+groupW*i+groupW/2;return(
-          <g key={i}>
-            <rect x={cx-barW-2} y={y(d.ventas)} width={barW} height={Math.max(H-padB-y(d.ventas),0)} fill="var(--accent)" rx="2"/>
-            <rect x={cx+2} y={y(d.gastos)} width={barW} height={Math.max(H-padB-y(d.gastos),0)} fill="var(--primary)" rx="2"/>
-            {i%paso===0&&<text x={cx} y={H-8} textAnchor="middle" fontSize="10.5" fill="var(--ink-soft)">{d.label}</text>}
-          </g>
-        );})}
-        <text x={padL-8} y={y(max)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">{money(max)}</text>
-        <text x={padL-8} y={y(0)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">$0</text>
+    <div style={{display:"flex",flexWrap:"wrap",alignItems:"center",gap:22}}>
+      <svg viewBox="0 0 200 200" style={{width:170,height:170,flexShrink:0}}>
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="var(--surface-2)" strokeWidth="28"/>
+        {activos.map((s,i)=>{
+          const frac=s.valor/total;
+          const len=frac*C;
+          const dashoffset=-acc;
+          acc+=len;
+          return(
+            <circle key={i} cx={cx} cy={cy} r={R} fill="none" stroke={s.color} strokeWidth="28" strokeDasharray={`${Math.max(len-2,0)} ${C-len+2}`} strokeDashoffset={dashoffset} strokeLinecap="round" transform={`rotate(-90 ${cx} ${cy})`}>
+              <title>{s.label}: {money(s.valor)} ({Math.round(frac*100)}%)</title>
+            </circle>
+          );
+        })}
+        <text x={cx} y={cy-4} textAnchor="middle" fontSize="13" fill="var(--ink-soft)" fontWeight="700">TOTAL</text>
+        <text x={cx} y={cy+16} textAnchor="middle" fontSize="17" fill="var(--primary-dark)" fontWeight="800">{money(total)}</text>
       </svg>
-      <div style={{display:"flex",gap:16,marginTop:8,fontSize:13}}>
-        <span style={{display:"flex",alignItems:"center",gap:6,color:"var(--ink-soft)"}}><span style={{width:10,height:10,borderRadius:3,background:"var(--accent)",display:"inline-block"}}/>Ventas</span>
-        <span style={{display:"flex",alignItems:"center",gap:6,color:"var(--ink-soft)"}}><span style={{width:10,height:10,borderRadius:3,background:"var(--primary)",display:"inline-block"}}/>Gastos</span>
+      <div style={{display:"flex",flexDirection:"column",gap:9,flex:1,minWidth:140}}>
+        {activos.map((s,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:14}}>
+            <span style={{width:11,height:11,borderRadius:4,background:s.color,flexShrink:0}}/>
+            <span style={{color:"var(--ink)",fontWeight:600,flex:1}}>{s.label}</span>
+            <span style={{color:"var(--ink-soft)",fontWeight:700}}>{Math.round(s.valor/total*100)}%</span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2109,17 +2180,50 @@ function GraficoBarrasRentabilidad({productos}){
   if(!productos.length)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay productos con margen calculado.</div>;
   const max=Math.max(...productos.map(p=>Math.abs(p.margen)),1);
   return(
-    <div style={{maxHeight:320,overflowY:"auto",padding:"4px 2px"}}>
+    <div style={{maxHeight:280,overflowY:"auto",padding:"4px 2px"}}>
       {productos.map((p,i)=>{const pct=Math.max(Math.abs(p.margen)/max*100,2);return(
-        <div key={p.id||i} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
-          <div style={{width:120,fontSize:13,color:"var(--ink)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={p.nombre}>{p.nombre}</div>
-          <div style={{flex:1,background:"var(--surface-2)",borderRadius:6,height:16,position:"relative"}}>
-            <div style={{width:`${pct}%`,height:"100%",borderRadius:6,background:p.margen<0?"var(--warn)":"var(--accent)"}}/>
+        <div key={p.id||i} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
+          <div style={{width:110,fontSize:13,color:"var(--ink)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={p.nombre}>{p.nombre}</div>
+          <div style={{flex:1,background:"var(--surface-2)",borderRadius:8,height:14,position:"relative"}}>
+            <div style={{width:`${pct}%`,height:"100%",borderRadius:8,background:p.margen<0?"var(--warn)":"var(--accent)"}}>
+              <title>{p.nombre}: {money(p.margen)}</title>
+            </div>
           </div>
-          <div style={{width:80,fontSize:13,fontWeight:700,textAlign:"right",color:p.margen<0?"var(--warn)":"var(--accent)"}}>{money(p.margen)}</div>
+          <div style={{width:76,fontSize:12.5,fontWeight:700,textAlign:"right",color:p.margen<0?"var(--warn)":"var(--accent)"}}>{money(p.margen)}</div>
         </div>
       );})}
     </div>
+  );
+}
+
+function GraficoLineas({datos}){
+  if(datos.length<2)return<div style={{fontSize:14,color:"var(--ink-soft)",padding:"20px 4px"}}>Todavía no hay suficientes cierres de caja para mostrar la evolución.</div>;
+  const W=680,H=190,padL=54,padR=16,padT=16,padB=30;
+  const max=Math.max(...datos.map(d=>d.valor),1);
+  const min=Math.min(...datos.map(d=>d.valor),0);
+  const rango=(max-min)||1;
+  const x=i=>padL+(i/(datos.length-1))*(W-padL-padR);
+  const y=v=>padT+(1-(v-min)/rango)*(H-padT-padB);
+  const puntos=datos.map((d,i)=>`${x(i)},${y(d.valor)}`).join(" ");
+  const area=`${padL},${y(min)} ${puntos} ${x(datos.length-1)},${y(min)}`;
+  const paso=Math.max(1,Math.ceil(datos.length/7));
+  const gid="gVentas";
+  return(
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block"}}>
+      <defs>
+        <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35"/>
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0"/>
+        </linearGradient>
+      </defs>
+      {[0,.25,.5,.75,1].map(f=>{const yy=padT+f*(H-padT-padB);return<line key={f} x1={padL} y1={yy} x2={W-padR} y2={yy} stroke="var(--line)" strokeWidth="1"/>;})}
+      <polygon points={area} fill={`url(#${gid})`}/>
+      <polyline points={puntos} fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round"/>
+      {datos.map((d,i)=><circle key={i} cx={x(i)} cy={y(d.valor)} r="3.5" fill="var(--primary)" stroke="var(--surface)" strokeWidth="1.5"><title>{d.label}: {money(d.valor)}</title></circle>)}
+      <text x={padL-8} y={y(max)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">{money(max)}</text>
+      <text x={padL-8} y={y(min)+4} textAnchor="end" fontSize="11" fill="var(--ink-soft)">{money(min)}</text>
+      {datos.map((d,i)=>i%paso===0?<text key={i} x={x(i)} y={H-8} textAnchor="middle" fontSize="10.5" fill="var(--ink-soft)">{d.label}</text>:null)}
+    </svg>
   );
 }
 
@@ -2162,8 +2266,12 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
   const stockBajo=insumos.filter(i=>Number(i.stock_actual)<=Number(i.stock_minimo));
   const cierresEvolucion=[...cierres].sort((a,b)=>a.fecha<b.fecha?-1:1).slice(-30);
   const datosVentas=cierresEvolucion.map(c=>({label:c.fecha.slice(5),valor:Number(c.total_general||0)}));
-  const datosVentasGastos=cierresEvolucion.map(c=>({label:c.fecha.slice(5),ventas:Number(c.total_general||0),gastos:gastos.filter(g=>g.fecha===c.fecha).reduce((s,g)=>s+Number(g.monto),0)}));
   const tablaConMargen=tabla.filter(m=>m.margen!=null);
+  const datosMetodoPago=[
+    {label:"Efectivo",valor:cierresEvolucion.reduce((s,c)=>s+Number(c.total_efectivo||0),0),color:"var(--accent)"},
+    {label:"Tarjeta",valor:cierresEvolucion.reduce((s,c)=>s+Number(c.total_tarjeta||0),0),color:"var(--primary)"},
+    {label:"Transferencia",valor:cierresEvolucion.reduce((s,c)=>s+Number(c.total_transferencia||0),0),color:"var(--primary-dark)"}
+  ];
   const generarAnalisis=async()=>{
     setAnalisisLoading(true);setAnalisis(null);
     const cierreHoy=cierres.find(c=>c.fecha===hoy());
@@ -2205,14 +2313,20 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA ESTIMADA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:gananciaHoy<0?"var(--warn)":"var(--accent)"}}>{money(gananciaHoy)}{ventasHoy>0&&<span style={{fontSize:14,fontWeight:600,color:"var(--ink-soft)"}}> ({margenPctHoy}%)</span>}</div></div>
         </div>
       </div>
-      {cierresEvolucion.length>=2&&<div className="card" style={{padding:18,marginBottom:22}}>
-        <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>EVOLUCIÓN DE VENTAS</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:16,marginBottom:16}}>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:16,fontWeight:800,color:"var(--ink-soft)",marginBottom:14}}>VENTAS POR MEDIO DE PAGO</div>
+          <GraficoDonut segmentos={datosMetodoPago}/>
+        </div>
+        <div className="card" style={{padding:18}}>
+          <div style={{fontSize:16,fontWeight:800,color:"var(--ink-soft)",marginBottom:14}}>RENTABILIDAD POR PRODUCTO</div>
+          <GraficoBarrasRentabilidad productos={tablaConMargen}/>
+        </div>
+      </div>
+      <div className="card" style={{padding:18,marginBottom:22}}>
+        <div style={{fontSize:16,fontWeight:800,color:"var(--ink-soft)",marginBottom:14}}>EVOLUCIÓN DE VENTAS</div>
         <GraficoLineas datos={datosVentas}/>
-      </div>}
-      {cierresEvolucion.length>=1&&<div className="card" style={{padding:18,marginBottom:22}}>
-        <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>VENTAS VS. GASTOS</div>
-        <GraficoBarrasAgrupadas datos={datosVentasGastos}/>
-      </div>}
+      </div>
       {sinPrecio.length>0&&<div className="card" style={{padding:16,marginBottom:22,background:"var(--warn-tint)",border:"1px solid var(--warn)"}}>
         <div style={{fontWeight:800,color:"var(--warn)",marginBottom:8}}>⚠ Productos sin precio todavía</div>
         <div style={{fontSize:13.5,color:"var(--warn)",marginBottom:6}}>Todavía no se puede calcular el margen — falta comprar algún ingrediente de la receta.</div>
@@ -2249,9 +2363,6 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
         </div>
       </div>
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>RENTABILIDAD POR PRODUCTO</div>
-      {tablaConMargen.length>0&&<div className="card" style={{padding:18,marginBottom:16}}>
-        <GraficoBarrasRentabilidad productos={tablaConMargen}/>
-      </div>}
       {!tabla.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste productos en el Menú.</div>}
       {tabla.length>0&&<div className="card" style={{padding:0,overflowX:"auto"}}>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:14}}>
@@ -2342,6 +2453,8 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
   const UMBRAL_MARGEN_BAJO=config?.umbral_margen_bajo??25;
   const itemsHoy=items.filter(i=>i.created_at&&i.created_at.slice(0,10)===hoy());
   const ventasHoy=itemsHoy.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+  const cantidadPedidosHoy=new Set(itemsHoy.map(i=>i.pedido_id)).size;
+  const ticketPromedioHoy=cantidadPedidosHoy>0?ventasHoy/cantidadPedidosHoy:0;
   const costoMercaderiaHoy=itemsHoy.reduce((s,i)=>{const mi=menu.find(m=>m.id===i.menu_item_id);return s+(mi?costoProducto(mi,recetas,insumos)*i.cantidad:0);},0);
   const gastosHoy=gastos.filter(g=>g.fecha===hoy()).reduce((s,g)=>s+Number(g.monto),0);
   const gananciaHoy=ventasHoy-costoMercaderiaHoy-gastosHoy;
@@ -2367,6 +2480,8 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>VENTAS HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:"var(--primary-dark)"}}>{money(ventasHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>GANANCIA ESTIMADA</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700,color:gananciaHoy<0?"var(--warn)":"var(--accent)"}}>{money(gananciaHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>MESAS OCUPADAS</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700}}>{mesasOcupadas}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>PEDIDOS HOY</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700}}>{cantidadPedidosHoy}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>TICKET PROMEDIO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:24,fontWeight:700}}>{money(ticketPromedioHoy)}</div></div>
         </div>
         {!cierreHoy&&<div style={{fontSize:13,color:"var(--ink-soft)",marginTop:10}}>Todavía no cerraste la caja de hoy.</div>}
       </div>
@@ -2383,7 +2498,7 @@ function PanelInicio({identidad,mesas,items,menu,recetas,insumos,gastos,config,c
           {margenBajo.slice(0,4).map(m=><div key={m.id} style={{fontSize:14,padding:"2px 0"}}>• {m.nombre} ({m.pct}%)</div>)}
           {margenBajo.length>4&&<div style={{fontSize:13,color:"var(--ink-soft)"}}>+{margenBajo.length-4} más — ver Resultados</div>}
         </div>
-      </div>
+        </div>
       <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
         <button className="bg" onClick={()=>irA("mesas")}>🍽️ Ir a Mesas</button>
         <button className="bg" onClick={()=>irA("caja")}>💰 Ir a Caja</button>
