@@ -474,7 +474,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
     await sb.from("mesas").update({estado:"libre",mozo_id:null,mozo_nombre:null}).eq("id",mesaSel.id);
     setPidiendoPago(false);setMesaId(null);reload();cargarCobrosHoy();
   };
-  const normCat=s=>(s||"").trim().normalize("NFC");
+  const normCat=s=>(s||"").trim().normalize("NFC").toLowerCase();
   const cats=[...new Map(menu.filter(m=>m.activo).map(m=>[normCat(m.categoria),m.categoria.trim()])).values()];
   const normalizar=s=>(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   const menuFiltradoBusqueda=busquedaMenu.trim()?menu.filter(m=>m.activo&&normalizar(m.nombre).includes(normalizar(busquedaMenu))):[];
@@ -1270,7 +1270,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
   const delRec=async id=>{await sb.from("recetas").delete().eq("id",id);reload();};
   const menuFiltrado=menu.filter(m=>!m.archivado&&m.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   const archivados=menu.filter(m=>m.archivado);
-  const normCat=s=>(s||"").trim().normalize("NFC");
+  const normCat=s=>(s||"").trim().normalize("NFC").toLowerCase();
   const cats=[...new Map(menuFiltrado.map(m=>[normCat(m.categoria),m.categoria.trim()])).values()];
   const costoItem=item=>costoProducto(item,recetas,insumos);
   const[verTabla,setVerTabla]=useState(false);
