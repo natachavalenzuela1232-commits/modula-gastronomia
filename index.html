@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+     <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -497,8 +497,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
           <div className="card" style={{padding:16,marginBottom:16}}>
             <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
-            {itemsMesa.map(i=>(
-        <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
+                {itemsMesa.map(i=>(
+              <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
@@ -631,7 +631,7 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
                       {abierto&&<div style={{background:"rgba(255,255,255,0.5)",borderRadius:8,padding:"6px 10px",marginTop:6}}>
                         {itemsP.map(i=>(
                           <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:14.5,padding:"3px 0",color:"var(--ink)"}}>
-                            <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</span>
+                            <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>} <span style={{color:"var(--ink-soft)",fontSize:13}}>· {hora(i.created_at)}</span></span>
                             <span>{money(i.precio)}</span>
                           </div>
                         ))}
@@ -660,6 +660,11 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
               <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary)":"var(--accent-tint)",color:m.estado==="ocupada"?"white":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
               {tieneListo&&<span className="tag" style={{background:"var(--accent)",color:"white"}}>🔔 Listo para retirar</span>}
               {tieneMensajeNuevo&&<span className="tag" style={{background:"var(--warn)",color:"white"}}>💬 Mensaje nuevo</span>}
+              {m.estado==="ocupada"&&itemsM.length>0&&<div style={{width:"100%",textAlign:"left",marginTop:6,paddingTop:6,borderTop:"1px solid rgba(0,0,0,0.08)"}}>
+                {itemsM.map(i=>(
+                  <div key={i.id} style={{fontSize:12,lineHeight:1.5,color:"var(--ink-soft)"}}>{i.nombre} <span style={{opacity:0.8}}>· {hora(i.created_at)}</span></div>
+                ))}
+              </div>}
             </button>
           );})}
         </div>
@@ -671,34 +676,58 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
 
 // ---- VISTA COCINA ----
 function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
-  const pend=items.filter(i=>i.estado==="pendiente"||i.estado==="listo").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+  const[vista,setVista]=useState("activos");
+  const pend=items.filter(i=>i.estado==="pendiente").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
+  const historial=items.filter(i=>(i.estado==="listo"||i.estado==="entregado")&&i.created_at&&i.created_at.slice(0,10)===hoy()).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   return(
     <div>
       <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>
       <div style={{padding:18}}>
-        {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
-          {Object.entries(porMesa).map(([mesa,its])=>(
-            <div key={mesa} className="card" style={{padding:16}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",marginBottom:10}}>Mesa {mesa}</div>
-              {its.map(i=>(
-                <div key={i.id} style={{padding:"10px 0",borderTop:"1px solid var(--line)"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
-                      {i.aclaracion&&<div style={{fontSize:14.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
-                      <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+        <div style={{display:"flex",gap:8,marginBottom:18}}>
+          <button className={vista==="activos"?"bp":"bg"} style={{fontSize:14,padding:"8px 14px"}} onClick={()=>setVista("activos")}>Pedidos activos</button>
+          <button className={vista==="historial"?"bp":"bg"} style={{fontSize:14,padding:"8px 14px"}} onClick={()=>setVista("historial")}>Historial</button>
+        </div>
+        {vista==="activos"?(<>
+          {!Object.keys(porMesa).length&&<div style={{color:"var(--ink-soft)",fontSize:15,textAlign:"center",marginTop:60}}>No hay pedidos pendientes. 🎉</div>}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:16}}>
+            {Object.entries(porMesa).map(([mesa,its])=>(
+              <div key={mesa} className="card" style={{padding:16}}>
+                <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",marginBottom:10}}>Mesa {mesa}</div>
+                {its.map(i=>(
+                  <div key={i.id} style={{padding:"10px 0",borderTop:"1px solid var(--line)"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>  
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
+                        {i.aclaracion&&<div style={{fontSize:14.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
+                        <div style={{fontSize:13.5,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                        <span className="tag" style={{background:"var(--warn-tint)",color:"var(--warn)",marginTop:4}}>🔥 En preparación</span>
+                      </div>
+                      <button className="bp" style={{fontSize:14.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Listo</button>
                     </div>
-                    {i.estado==="pendiente"?<button className="bp" style={{fontSize:14.5,padding:"7px 12px"}} onClick={()=>marcarListo(i)}>Marcar listo</button>:<span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>Listo, esperando mozo</span>}
+                    <ChatHilo itemId={i.id} mensajes={mensajes} autor="cocina" userId={userId} reload={reload}/>
                   </div>
-                  <ChatHilo itemId={i.id} mensajes={mensajes} autor="cocina" userId={userId} reload={reload}/>
-                </div>
-              ))}
-            </div>
-          ))}
+                ))}
+              </div>
+            ))}
           </div>
+        </>):(
+          <div className="card" style={{padding:16}}>
+            <div style={{fontSize:14.5,color:"var(--ink-soft)",marginBottom:12}}>Lo que ya preparaste hoy.</div>
+            {!historial.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no marcaste nada como listo hoy.</div>}
+            {historial.map(i=>(
+              <div key={i.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:"1px solid var(--line)"}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14.5}}>Mesa {i.mesa_numero} · {i.nombre}</div>
+                  {i.aclaracion&&<div style={{fontSize:13.5,color:"var(--primary)"}}>⚠ {i.aclaracion}</div>}
+                  <div style={{fontSize:13,color:"var(--ink-soft)"}}>{hora(i.created_at)}</div>
+                </div>
+                <span className="tag" style={{background:"var(--accent-tint)",color:"var(--accent)"}}>{i.estado==="entregado"?"Entregado":"Listo"}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -709,7 +738,7 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
   const[tab,setTabRaw]=useState(()=>localStorage.getItem("modula_tab")||"inicio");
   const setTab=t=>{setTabRaw(t);localStorage.setItem("modula_tab",t);};
   const pendientesGastosFijos=configsPagoEmpleado.filter(c=>c.proxima_fecha_pago<=hoy()).length+gastosFijos.filter(g=>g.activo&&g.proxima_fecha_pago<=hoy()).length;
-  const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"pedidos",label:"Pedidos",icon:"🧾"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"gastosfijos",label:"Gastos fijos",icon:"🧾"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
+  const NAV=[{id:"inicio",label:"Inicio",icon:"🏠"},{id:"mesas",label:"Mesas",icon:"🍽️"},{id:"empleados",label:"Empleados",icon:"👥"},{id:"menu",label:"Menú",icon:"📋"},{id:"compras",label:"Compras",icon:"🛒"},{id:"stock",label:"Stock",icon:"📦"},{id:"caja",label:"Caja",icon:"💰"},{id:"gastosfijos",label:"Gastos fijos",icon:"🧾"},{id:"resultados",label:"Resultados",icon:"📊"},{id:"config",label:"Configuración",icon:"⚙️"}];
   const totalHoy=pedidos.reduce((s,p)=>{const its=items.filter(i=>i.pedido_id===p.id);return s+its.reduce((s2,i)=>s2+Number(i.precio)*i.cantidad,0);},0);
   const stockBajo=insumos.filter(i=>i.stock_actual<=i.stock_minimo);
   const[resumen,setResumen]=useState(null);
@@ -775,13 +804,12 @@ function VistaDueño({userId,identidad,empleados,mesas,menu,pedidos,items,insumo
         </div>
         {resumen&&<div className="card" style={{padding:18,marginBottom:22,lineHeight:1.6,fontSize:14.5}}>{resumen}</div>}
         {tab==="inicio"&&<PanelInicio identidad={identidad} mesas={mesas} items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} config={config} cierres={cierres} irA={setTab}/>}
-        {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} reload={reload}/>}
-        {tab==="pedidos"&&<PanelPedidos userId={userId}/>}
+        {tab==="mesas"&&<PanelMesas userId={userId} mesas={mesas} pedidos={pedidos} items={items} pagos={pagos} reload={reload}/>}
         {tab==="empleados"&&<PanelEmpleados userId={userId} empleados={empleados} configsPagoEmpleado={configsPagoEmpleado} pagosEmpleado={pagosEmpleado} reload={reload}/>}
         {tab==="menu"&&<PanelMenu userId={userId} menu={menu} insumos={insumos} recetas={recetas} reload={reload}/>}
         {tab==="compras"&&<PanelCompras userId={userId} insumos={insumos} compras={compras} recetas={recetas} menu={menu} config={config} reload={reload}/>}
         {tab==="stock"&&<PanelStock userId={userId} insumos={insumos} reload={reload}/>}
-        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} compras={compras} gastos={gastos} ingresosExtra={ingresosExtra} pagos={pagos} reload={reload}/>}
+        {tab==="caja"&&<PanelCaja userId={userId} pedidos={pedidos} items={items} cierres={cierres} menu={menu} recetas={recetas} insumos={insumos} compras={compras} gastos={gastos} ingresosExtra={ingresosExtra} pagos={pagos} pagosEmpleado={pagosEmpleado} reload={reload}/>}
         {tab==="gastosfijos"&&<PanelGastosFijos userId={userId} gastosFijos={gastosFijos} pagosGastoFijo={pagosGastoFijo} configsPagoEmpleado={configsPagoEmpleado} pagosEmpleado={pagosEmpleado} compras={compras} gastos={gastos} cierres={cierres} ingresosExtra={ingresosExtra} reload={reload}/>}
         {tab==="resultados"&&<PanelResultados items={items} menu={menu} recetas={recetas} insumos={insumos} gastos={gastos} compras={compras} config={config} mesas={mesas} cierres={cierres}/>}
         {tab==="config"&&<PanelConfiguracion userId={userId} config={config} reload={reload}/>}
@@ -870,15 +898,16 @@ function PanelPedidos({userId}){
                 {!its.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Sin ítems.</div>}
               </div>}
             </div>
-          );
+               );
         })}
       </div>
     </div>
   );
 }
 
-function PanelMesas({userId,mesas,pedidos,items,reload}){
+function PanelMesas({userId,mesas,pedidos,items,pagos,reload}){
   const[cant,setCant]=useState("");
+  const[abiertaId,setAbiertaId]=useState(null);
   const crear=async()=>{const n=parseInt(cant);if(!n||n<1)return;const ex=mesas.length;const nv=Array.from({length:n},(_,i)=>({user_id:userId,numero:ex+i+1}));await sb.from("mesas").insert(nv);setCant("");reload();};
   return(
     <div>
@@ -886,19 +915,43 @@ function PanelMesas({userId,mesas,pedidos,items,reload}){
         <div><label style={{fontSize:14.5,fontWeight:700,color:"var(--ink-soft)"}}>Agregar mesas</label><input className="field" type="number" style={{width:100}} value={cant} onChange={e=>setCant(e.target.value)} placeholder="cant."/></div>
         <button className="bp" onClick={crear}>Agregar</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
-        {mesas.map(m=>{const ped=pedidos.find(p=>p.mesa_id===m.id);const its=ped?items.filter(i=>i.pedido_id===ped.id):[];const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);return(
-          <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
-            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
+        {mesas.map(m=>{
+          const ped=pedidos.find(p=>p.mesa_id===m.id);
+          const its=ped?items.filter(i=>i.pedido_id===ped.id):[];
+          const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
+          const pagado=ped?totalPagosDe(pagos,ped.id):0;
+          const pendiente=Math.max(0,Math.round((tot-pagado)*100)/100);
+          const abierta=abiertaId===m.id;
+          return(
+          <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",cursor:m.estado==="ocupada"?"pointer":"default"}} onClick={()=>{if(m.estado==="ocupada")setAbiertaId(abierta?null:m.id);}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
+              {m.estado==="ocupada"&&<span style={{fontSize:13,color:"var(--ink-soft)"}}>{abierta?"▾":"▸"}</span>}
+            </div>
             <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
             {m.estado==="ocupada"&&<div style={{fontSize:14.5,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
+            {m.estado==="ocupada"&&(
+              <div style={{marginTop:6}}>
+                <span className="tag" style={{background:pendiente<=0&&tot>0?"var(--accent-tint)":"var(--warn-tint)",color:pendiente<=0&&tot>0?"var(--accent)":"var(--warn)"}}>{pendiente<=0&&tot>0?"✅ Pagado":pagado>0?`Pagó ${money(pagado)} de ${money(tot)}`:"Sin cobrar"}</span>
+              </div>
+            )}
+            {abierta&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--line)"}}>
+              {its.map(i=>(
+                <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:14,padding:"3px 0"}}>
+                  <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>} <span style={{color:"var(--ink-soft)",fontSize:12.5}}>· {hora(i.created_at)}</span></span>
+                  <span>{money(i.precio)}</span>
+                </div>
+              ))}
+              {!its.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Sin ítems cargados.</div>}
+            </div>}
           </div>
         );})}
         {!mesas.length&&<div style={{color:"var(--ink-soft)",fontSize:15}}>Todavía no cargaste mesas.</div>}
       </div>
     </div>
   );
-  }
+}
 
 function PanelEmpleados({userId,empleados,configsPagoEmpleado,pagosEmpleado,reload}){
   const[form,setForm]=useState({nombre:"",rol:"mozo",pin:""});
@@ -1045,7 +1098,7 @@ function ItemGastoFijo({userId,item,pagos,reload}){
   const ultimoPago=historial[0];
   const pendiente=item.activo&&item.proxima_fecha_pago<=hoy();
   const abrirEdicion=()=>{
-    setForm({nombre:item.nombre,monto:String(item.monto),frecuencia:item.frecuencia,frecuencia_dias:item.frecuencia_dias?String(item.frecuencia_dias):"",fecha_inicio:item.fecha_inicio,observaciones:item.observaciones||""});
+       setForm({nombre:item.nombre,monto:String(item.monto),frecuencia:item.frecuencia,frecuencia_dias:item.frecuencia_dias?String(item.frecuencia_dias):"",fecha_inicio:item.fecha_inicio,observaciones:item.observaciones||""});
     setEditando(true);
   };
   const guardar=async()=>{
@@ -1298,7 +1351,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
               </tr>
             ))}
-            </tbody>
+          </tbody>
         </table>
       </div>}
       {open&&(()=>{
@@ -1645,7 +1698,7 @@ function PanelStock({userId,insumos,reload}){
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📦 Acá ves la ficha de cada insumo: cuánto tenés, en qué unidad lo contás y cuándo avisarte que hay que reponer. Para sumar stock de algo que ya comprás seguido, usá "🛒 Compras". Si es la primera vez que usás MODULA y ya tenías insumos guardados en el negocio, usá el botón de acá abajo.</span>
       </div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>{setOpenInicial(!openInicial);setPasoInicial(0);resetInicial();}}>📦 Cargar stock inicial</button>
-      {openInicial&&(()=>{
+       {openInicial&&(()=>{
         return(
         <div className="card" style={{padding:20,marginBottom:16}}>
           <div style={{fontSize:19,fontWeight:800,color:"var(--primary-dark)",marginBottom:2}}>📦 Cargar stock inicial</div>
@@ -1764,7 +1817,7 @@ function PanelStock({userId,insumos,reload}){
   );
 }
 
-function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,gastos,ingresosExtra,pagos,reload}){
+function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,gastos,ingresosExtra,pagos,pagosEmpleado,reload}){
   const[abierto,setAbierto]=useState(null);
   const[pagoAbierto,setPagoAbierto]=useState(null);
   const[pagoForm,setPagoForm]=useState({metodo:"efectivo",metodoOtro:"",importe:""});
@@ -1786,7 +1839,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const borrarPagoCaja=async pg=>{if(!confirm("¿Borrar este pago registrado?"))return;await sb.from("pagos_pedido").delete().eq("id",pg.id);reload();};
   const[cierreAbierto,setCierreAbierto]=useState(null);
   const[detalleCierre,setDetalleCierre]=useState({});
-  const CATEGORIAS_GASTO=["Alquiler","Servicios","Sueldos","Mantenimiento","Publicidad","Impuestos","Otros"];
+  const CATEGORIAS_GASTO=["Alquiler","Servicios","Mantenimiento","Publicidad","Otros"];
   const[gastoForm,setGastoForm]=useState({categoria:"Alquiler",monto:"",metodo_pago:"efectivo",descripcion:""});
   const[openGasto,setOpenGasto]=useState(false);
   const agregarGasto=async()=>{
@@ -1809,7 +1862,9 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const totalGastosHoy=gastosHoy.reduce((s,g)=>s+Number(g.monto),0);
   const totalIngresosExtraHoy=ingresosExtraHoy.reduce((s,i)=>s+Number(i.monto),0);
   const totalComprasHoy=comprasHoy.reduce((s,c)=>s+Number(c.cantidad)*Number(c.precio_unitario),0);
-  const totalEgresosHoy=totalGastosHoy+totalComprasHoy;
+  const pagosEmpleadoHoy=pagosEmpleado.filter(p=>p.fecha_pago===hoy());
+  const totalPagosEmpleadoHoy=pagosEmpleadoHoy.reduce((s,p)=>s+Number(p.monto),0);
+  const totalEgresosHoy=totalGastosHoy+totalComprasHoy+totalPagosEmpleadoHoy;
   const cierreHoyCaja=cierres.find(c=>c.fecha===hoy());
   const ingresosVentasHoy=cierreHoyCaja?Number(cierreHoyCaja.total_general):0;
   const totalIngresosHoy=ingresosVentasHoy+totalIngresosExtraHoy;
@@ -1897,7 +1952,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
       if(aCerrarAhora.length===0&&(!sueltos||!sueltos.length)){
         alert(mesasSinPagoCompleto.length?`Ninguna mesa está totalmente pagada todavía (pendientes: Mesa ${mesasSinPagoCompleto.join(", Mesa ")}).`:"No hay ninguna mesa para cerrar. La caja ya está al día.");
         return;
-  }
+      }
       const total=Object.values(totalesPorMetodo).reduce((s,v)=>s+v,0);
       const ef=totalesPorMetodo["efectivo"]||0,tar=totalesPorMetodo["tarjeta"]||0,tr=totalesPorMetodo["transferencia"]||0;
       const{data:cierreNuevo}=await sb.from("cierres_caja").insert({user_id:userId,fecha:hoyStr,total_efectivo:ef,total_tarjeta:tar,total_transferencia:tr,total_general:total,cantidad_mesas:mesasCant,totales_por_metodo:totalesPorMetodo}).select().single();
@@ -1923,7 +1978,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
         <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>BALANCE DE HOY</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:16,marginBottom:10}}>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>INGRESOS (ventas + otros)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--accent)"}}>{money(totalIngresosHoy)}</div></div>
-          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>EGRESOS (compras + gastos)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary)"}}>{money(totalEgresosHoy)}</div></div>
+          <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>EGRESOS (compras + gastos + pagos a empleados)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary)"}}>{money(totalEgresosHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>SALDO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:totalIngresosHoy-totalEgresosHoy<0?"var(--warn)":"var(--ink)"}}>{money(totalIngresosHoy-totalEgresosHoy)}</div></div>
         </div>
         {!cierreHoyCaja&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>Todavía no cerraste la caja de hoy, así que "Ventas" está en $0 hasta que cierres el día.</div>}
@@ -2043,7 +2098,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           const pendienteP=Math.max(0,Math.round((tot-pagadoP)*100)/100);
           const pagoAbiertoAqui=pagoAbierto===p.id;
           return(
-          <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
+           <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
             <div style={{cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{fontWeight:700,fontSize:16}}>{abiertoAqui?"▾":"▸"} Mesa {p.mesa_numero}</div>
@@ -2088,17 +2143,17 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           </div>
         );})}
       </div>}
-      {pedidos.length>0&&(
-        <div className="card" style={{padding:18,marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"var(--primary-dark)"}}>Total acumulado: {money(totalGeneral)}</div>
-          <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja} disabled={cerrandoCaja}>{cerrandoCaja?"Cerrando…":"💰 Cerrar caja del día"}</button>
-        </div>
-      )}
+      <div className="card" style={{padding:18,marginBottom:22,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
+        <div style={{fontFamily:"'Fraunces',serif",fontSize:20,fontWeight:700,color:"var(--primary-dark)"}}>Total acumulado: {money(totalGeneral)}</div>
+        <button className="bp" style={{padding:"12px 20px"}} onClick={cerrarCaja} disabled={cerrandoCaja}>{cerrandoCaja?"Cerrando…":"💰 Cerrar caja del día"}</button>
+      </div>
+      <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>PEDIDOS</div>
+      <div style={{marginBottom:22}}><PanelPedidos userId={userId}/></div>
       <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:12}}>HISTORIAL DE CIERRES</div>
       {!cierres.length&&<div className="card" style={{padding:20,color:"var(--ink-soft)",fontSize:15}}>Todavía no realizaste ningún cierre de caja.</div>}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {cierres.map(c=>{const cAbierto=cierreAbierto===c.id;return(
-      <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
+          <div key={c.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10}}>
             <div style={{cursor:"pointer"}} onClick={()=>verDetalleCierre(c)}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{fontWeight:700,fontSize:16}}>{cAbierto?"▾":"▸"} Caja del {c.fecha}</div>
@@ -2243,7 +2298,7 @@ function GraficoTortaRentabilidad({productos}){
       </svg>
       <div style={{display:"flex",flexDirection:"column",gap:8,flex:1,minWidth:150,maxHeight:220,overflowY:"auto"}}>
         {slices.map((s,i)=>(
-          <div key={s.id||i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5}}>
+      <div key={s.id||i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5}}>
             <span style={{width:11,height:11,borderRadius:4,background:s.color,flexShrink:0}}/>
             <span style={{color:"var(--ink)",fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={s.nombre}>{s.nombre}</span>
             <span style={{color:"var(--ink-soft)",fontWeight:700}}>{money(s.margen)}</span>
@@ -2443,7 +2498,7 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.pct==null?"var(--warn)":m.pct<UMBRAL_MARGEN_BAJO?"var(--warn)":"var(--ink)"}}>{m.pct==null?"—":`${m.pct}%`}</td>
                 <td style={{padding:"9px 14px",textAlign:"center"}}>{conVentaHoy.has(m.id)?"✅":"—"}</td>
-              </tr>
+                </tr>
             ))}
           </tbody>
         </table>
