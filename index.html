@@ -1,4 +1,4 @@
-     <!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8" />
@@ -497,8 +497,8 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
           <div className="card" style={{padding:16,marginBottom:16}}>
             <div style={{fontSize:21,fontWeight:800,color:"var(--ink-soft)",marginBottom:10}}>PEDIDO ACTUAL</div>
             {!itemsMesa.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)"}}>Todavía no agregaste nada.</div>}
-                {itemsMesa.map(i=>(
-              <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
+            {itemsMesa.map(i=>(
+           <div key={i.id} style={{padding:"8px 0",borderTop:"1px solid var(--line)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}{i.aclaracion&&<span style={{fontWeight:500,color:"var(--ink-soft)"}}> — {i.aclaracion}</span>}</div>
@@ -513,47 +513,6 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
             ))}
             {itemsMesa.length>0&&<div style={{textAlign:"right",fontWeight:800,marginTop:10,fontFamily:"'Fraunces',serif",fontSize:17,color:"var(--primary-dark)"}}>Total: {money(totalMesa)}</div>}
           </div>
-          <div className="card" style={{padding:16,marginBottom:16}}>
-            <input className="field" style={{marginBottom:14,fontSize:16}} placeholder="🔍 Buscar producto (ej: hamburguesa)…" value={busquedaMenu} onChange={e=>setBusquedaMenu(e.target.value)}/>
-            {busquedaMenu.trim()?(
-              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
-                {menuFiltradoBusqueda.map(m=>(
-                  <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
-                    {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
-                  </button>
-                ))}
-                {!menuFiltradoBusqueda.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)",gridColumn:"1/-1"}}>No encontramos nada con "{busquedaMenu}".</div>}
-              </div>
-            ):(
-              <React.Fragment>
-                {cats.map(cat=>(
-                  <div key={cat} style={{marginBottom:14}}>
-                    <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
-                      {menu.filter(m=>normCat(m.categoria)===normCat(cat)&&m.activo).map(m=>(
-                        <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
-                          {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {!menu.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>El dueño todavía no cargó el menú.</div>}
-              </React.Fragment>
-            )}
-          </div>
-          {productoModal&&<div style={{position:"fixed",inset:0,background:"rgba(43,33,27,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,zIndex:50}} onClick={()=>setProductoModal(null)}>
-            <div className="card" style={{width:"100%",maxWidth:380,padding:22}} onClick={e=>e.stopPropagation()}>
-              <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:19,marginBottom:4}}>{productoModal.nombre}</div>
-              <div style={{fontSize:15,color:"var(--ink-soft)",marginBottom:16}}>{money(productoModal.precio)}</div>
-              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo quiere? (opcional)</label>
-              <input className="field" autoFocus value={aclModal} onChange={e=>setAclModal(e.target.value)} placeholder="ej: sin lechuga" style={{marginBottom:16}} onKeyDown={e=>e.key==="Enter"&&confirmarAgregar()}/>
-              <div style={{display:"flex",gap:10}}>
-                <button className="bg" style={{flex:1,padding:12}} onClick={()=>setProductoModal(null)}>Cancelar</button>
-                <button className="bp" style={{flex:1,padding:12}} onClick={confirmarAgregar}>➕ Agregar</button>
-              </div>
-            </div>
-          </div>}
           {!pidiendoPago?(
             <button className="bp" style={{width:"100%",padding:14}} onClick={()=>setPidiendoPago(true)} disabled={!itemsMesa.length}>💳 Cobrar mesa</button>
           ):(
@@ -597,6 +556,47 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
               <button className="bg" style={{width:"100%"}} onClick={()=>setPidiendoPago(false)}>Volver al pedido</button>
             </div>
           )}
+          <div className="card" style={{padding:16,marginBottom:16}}>
+            <input className="field" style={{marginBottom:14,fontSize:16}} placeholder="🔍 Buscar producto (ej: hamburguesa)…" value={busquedaMenu} onChange={e=>setBusquedaMenu(e.target.value)}/>
+            {busquedaMenu.trim()?(
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
+                {menuFiltradoBusqueda.map(m=>(
+                  <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
+                    {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                  </button>
+                ))}
+                {!menuFiltradoBusqueda.length&&<div style={{fontSize:14.5,color:"var(--ink-soft)",gridColumn:"1/-1"}}>No encontramos nada con "{busquedaMenu}".</div>}
+              </div>
+            ):(
+              <React.Fragment>
+                {cats.map(cat=>(
+                  <div key={cat} style={{marginBottom:14}}>
+                    <div style={{fontSize:21,fontWeight:800,color:"var(--primary)",marginBottom:8}}>{cat.toUpperCase()}</div>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8}}>
+                      {menu.filter(m=>normCat(m.categoria)===normCat(cat)&&m.activo).map(m=>(
+                        <button key={m.id} className="bg" style={{padding:"12px 8px",textAlign:"center",fontWeight:700}} onClick={()=>abrirModalProducto(m)}>
+                          {m.nombre}<div style={{fontWeight:600,fontSize:14,color:"var(--ink-soft)",marginTop:3}}>{money(m.precio)}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {!menu.length&&<div style={{fontSize:14,color:"var(--ink-soft)"}}>El dueño todavía no cargó el menú.</div>}
+              </React.Fragment>
+            )}
+          </div>
+          {productoModal&&<div style={{position:"fixed",inset:0,background:"rgba(43,33,27,0.5)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,zIndex:50}} onClick={()=>setProductoModal(null)}>
+            <div className="card" style={{width:"100%",maxWidth:380,padding:22}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:19,marginBottom:4}}>{productoModal.nombre}</div>
+              <div style={{fontSize:15,color:"var(--ink-soft)",marginBottom:16}}>{money(productoModal.precio)}</div>
+              <label style={{fontSize:13.5,fontWeight:700,color:"var(--ink-soft)"}}>¿Cómo lo quiere? (opcional)</label>
+              <input className="field" autoFocus value={aclModal} onChange={e=>setAclModal(e.target.value)} placeholder="ej: sin lechuga" style={{marginBottom:16}} onKeyDown={e=>e.key==="Enter"&&confirmarAgregar()}/>
+              <div style={{display:"flex",gap:10}}>
+                <button className="bg" style={{flex:1,padding:12}} onClick={()=>setProductoModal(null)}>Cancelar</button>
+                <button className="bp" style={{flex:1,padding:12}} onClick={confirmarAgregar}>➕ Agregar</button>
+              </div>
+            </div>
+          </div>}
         </div>
       </div>
     );
@@ -675,12 +675,13 @@ function VistaMozo({userId,identidad,mesas,menu,pedidos,items,mensajes,pagos,rec
 }
 
 // ---- VISTA COCINA ----
-function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
+function VistaCocina({userId,identidad,items,mensajes,menu,cambiar,logout,reload}){
   const[vista,setVista]=useState("activos");
+  const vaACocina=i=>{const mi=menu.find(m=>m.id===i.menu_item_id);return mi?mi.va_a_cocina!==false:true;};
   const pend=items.filter(i=>i.estado==="pendiente").sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
   const porMesa={};pend.forEach(i=>{(porMesa[i.mesa_numero]=porMesa[i.mesa_numero]||[]).push(i);});
   const marcarListo=async i=>{await sb.from("pedido_items").update({estado:"listo"}).eq("id",i.id);reload();};
-  const historial=items.filter(i=>(i.estado==="listo"||i.estado==="entregado")&&i.created_at&&i.created_at.slice(0,10)===hoy()).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const historial=items.filter(i=>(i.estado==="listo"||i.estado==="entregado")&&i.created_at&&i.created_at.slice(0,10)===hoy()&&vaACocina(i)).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
   return(
     <div>
       <TopBar titulo="👨‍🍳 Cocina" identidad={identidad} cambiar={cambiar} logout={logout}/>
@@ -697,7 +698,7 @@ function VistaCocina({userId,identidad,items,mensajes,cambiar,logout,reload}){
                 <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:17,color:"var(--primary-dark)",marginBottom:10}}>Mesa {mesa}</div>
                 {its.map(i=>(
                   <div key={i.id} style={{padding:"10px 0",borderTop:"1px solid var(--line)"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>  
+                       <div style={{display:"flex",alignItems:"center",gap:10}}>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:14.5}}>{i.nombre}</div>
                         {i.aclaracion&&<div style={{fontSize:14.5,color:"var(--primary)",fontWeight:700}}>⚠ {i.aclaracion}</div>}
@@ -897,8 +898,8 @@ function PanelPedidos({userId}){
                 ))}
                 {!its.length&&<div style={{fontSize:13.5,color:"var(--ink-soft)"}}>Sin ítems.</div>}
               </div>}
-            </div>
-               );
+                 </div>
+          );
         })}
       </div>
     </div>
@@ -907,7 +908,6 @@ function PanelPedidos({userId}){
 
 function PanelMesas({userId,mesas,pedidos,items,pagos,reload}){
   const[cant,setCant]=useState("");
-  const[abiertaId,setAbiertaId]=useState(null);
   const crear=async()=>{const n=parseInt(cant);if(!n||n<1)return;const ex=mesas.length;const nv=Array.from({length:n},(_,i)=>({user_id:userId,numero:ex+i+1}));await sb.from("mesas").insert(nv);setCant("");reload();};
   return(
     <div>
@@ -922,13 +922,9 @@ function PanelMesas({userId,mesas,pedidos,items,pagos,reload}){
           const tot=its.reduce((s,i)=>s+Number(i.precio)*i.cantidad,0);
           const pagado=ped?totalPagosDe(pagos,ped.id):0;
           const pendiente=Math.max(0,Math.round((tot-pagado)*100)/100);
-          const abierta=abiertaId===m.id;
           return(
-          <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)",cursor:m.estado==="ocupada"?"pointer":"default"}} onClick={()=>{if(m.estado==="ocupada")setAbiertaId(abierta?null:m.id);}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
-              {m.estado==="ocupada"&&<span style={{fontSize:13,color:"var(--ink-soft)"}}>{abierta?"▾":"▸"}</span>}
-            </div>
+          <div key={m.id} className="card" style={{padding:14,borderColor:m.estado==="ocupada"?"var(--primary)":"var(--line)"}}>
+            <div style={{fontWeight:800,fontSize:15}}>Mesa {m.numero}</div>
             <span className="tag" style={{background:m.estado==="ocupada"?"var(--primary-tint)":"var(--accent-tint)",color:m.estado==="ocupada"?"var(--primary-dark)":"var(--accent)"}}>{m.estado==="ocupada"?"Ocupada":"Libre"}</span>
             {m.estado==="ocupada"&&<div style={{fontSize:14.5,color:"var(--ink-soft)",marginTop:8}}>Mozo: {m.mozo_nombre}<br/>Total: {money(tot)}</div>}
             {m.estado==="ocupada"&&(
@@ -936,7 +932,7 @@ function PanelMesas({userId,mesas,pedidos,items,pagos,reload}){
                 <span className="tag" style={{background:pendiente<=0&&tot>0?"var(--accent-tint)":"var(--warn-tint)",color:pendiente<=0&&tot>0?"var(--accent)":"var(--warn)"}}>{pendiente<=0&&tot>0?"✅ Pagado":pagado>0?`Pagó ${money(pagado)} de ${money(tot)}`:"Sin cobrar"}</span>
               </div>
             )}
-            {abierta&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--line)"}}>
+            {m.estado==="ocupada"&&<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid var(--line)"}}>
               {its.map(i=>(
                 <div key={i.id} style={{display:"flex",justifyContent:"space-between",fontSize:14,padding:"3px 0"}}>
                   <span>{i.nombre}{i.aclaracion&&<span style={{color:"var(--ink-soft)"}}> — {i.aclaracion}</span>} <span style={{color:"var(--ink-soft)",fontSize:12.5}}>· {hora(i.created_at)}</span></span>
@@ -1098,11 +1094,11 @@ function ItemGastoFijo({userId,item,pagos,reload}){
   const ultimoPago=historial[0];
   const pendiente=item.activo&&item.proxima_fecha_pago<=hoy();
   const abrirEdicion=()=>{
-       setForm({nombre:item.nombre,monto:String(item.monto),frecuencia:item.frecuencia,frecuencia_dias:item.frecuencia_dias?String(item.frecuencia_dias):"",fecha_inicio:item.fecha_inicio,observaciones:item.observaciones||""});
+    setForm({nombre:item.nombre,monto:String(item.monto),frecuencia:item.frecuencia,frecuencia_dias:item.frecuencia_dias?String(item.frecuencia_dias):"",fecha_inicio:item.fecha_inicio,observaciones:item.observaciones||""});
     setEditando(true);
   };
   const guardar=async()=>{
-    if(!form.monto||Number(form.monto)<=0)return;
+         if(!form.monto||Number(form.monto)<=0)return;
     setGuardando(true);
     try{
       await sb.from("gastos_fijos").update({
@@ -1302,7 +1298,7 @@ function PanelMenu({userId,menu,insumos,recetas,reload}){
     setForm({nombre:"",categoria:"",precio:"",va_a_cocina:true,usaReceta:true,costoManual:"",margenObjetivo:""});setOpen(false);reload();
   };
   const toggleCocina=async m=>{await sb.from("menu_items").update({va_a_cocina:!m.va_a_cocina}).eq("id",m.id);reload();};
-  const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
+     const toggle=async m=>{await sb.from("menu_items").update({activo:!m.activo}).eq("id",m.id);reload();};
   const toggleArchivar=async m=>{await sb.from("menu_items").update({archivado:!m.archivado}).eq("id",m.id);reload();};
   const[verArchivados,setVerArchivados]=useState(false);
   const del=async id=>{
@@ -1502,7 +1498,7 @@ function PanelCompras({userId,insumos,compras,recetas,menu,config,reload}){
           <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:18}}>Paso {pasoCompra+1} de 3</div>
 
           {pasoCompra===0&&<div>
-            <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué compraste?</div>
+               <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué compraste?</div>
             <input className="field" style={{fontSize:16,padding:14}} autoFocus list="lista-insumos" value={compra.nombre} onChange={e=>setCompra({...compra,nombre:e.target.value})} placeholder="ej: Carne molida" onKeyDown={e=>e.key==="Enter"&&confirmarProducto()}/>
             <datalist id="lista-insumos">{insumos.map(i=><option key={i.id} value={i.nombre}/>)}</datalist>
             <div style={{fontSize:13,color:"var(--ink-soft)",marginTop:6}}>Si ya lo comprás siempre, empezá a escribir y elegí de la lista. Si es la primera vez, escribí el nombre y listo — la app lo agrega sola.</div>
@@ -1698,11 +1694,11 @@ function PanelStock({userId,insumos,reload}){
         <span style={{fontSize:14.5,color:"var(--ink-soft)"}}>📦 Acá ves la ficha de cada insumo: cuánto tenés, en qué unidad lo contás y cuándo avisarte que hay que reponer. Para sumar stock de algo que ya comprás seguido, usá "🛒 Compras". Si es la primera vez que usás MODULA y ya tenías insumos guardados en el negocio, usá el botón de acá abajo.</span>
       </div>
       <button className="bp" style={{marginBottom:16}} onClick={()=>{setOpenInicial(!openInicial);setPasoInicial(0);resetInicial();}}>📦 Cargar stock inicial</button>
-       {openInicial&&(()=>{
+      {openInicial&&(()=>{
         return(
         <div className="card" style={{padding:20,marginBottom:16}}>
           <div style={{fontSize:19,fontWeight:800,color:"var(--primary-dark)",marginBottom:2}}>📦 Cargar stock inicial</div>
-          <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:16}}>Paso {pasoInicial+1} de 3 — para productos que ya tenías en el negocio antes de usar MODULA. Esto NO se guarda como una compra, solo carga el stock y el costo de una.</div>
+             <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:16}}>Paso {pasoInicial+1} de 3 — para productos que ya tenías en el negocio antes de usar MODULA. Esto NO se guarda como una compra, solo carga el stock y el costo de una.</div>
           {pasoInicial===0&&<div>
             <div style={{fontSize:17,fontWeight:700,marginBottom:14}}>¿Qué insumo ya tenías?</div>
             <input className="field" style={{fontSize:16,padding:14}} autoFocus list="lista-insumos-inicial" value={inicial.nombre} onChange={e=>setInicial({...inicial,nombre:e.target.value})} placeholder="ej: Cerveza Quilmes" onKeyDown={e=>e.key==="Enter"&&confirmarProductoInicial()}/>
@@ -1866,9 +1862,11 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
   const totalPagosEmpleadoHoy=pagosEmpleadoHoy.reduce((s,p)=>s+Number(p.monto),0);
   const totalEgresosHoy=totalGastosHoy+totalComprasHoy+totalPagosEmpleadoHoy;
   const cierreHoyCaja=cierres.find(c=>c.fecha===hoy());
-  const ingresosVentasHoy=cierreHoyCaja?Number(cierreHoyCaja.total_general):0;
+  const pagosHoyGlobal=pagos.filter(pg=>pg.created_at&&pg.created_at.slice(0,10)===hoy());
+  const ingresosVentasHoy=pagosHoyGlobal.reduce((s,pg)=>s+Number(pg.importe),0);
   const totalIngresosHoy=ingresosVentasHoy+totalIngresosExtraHoy;
-  const totalesPorMetodoHoy=cierreHoyCaja?.totales_por_metodo||{};
+  const totalesPorMetodoHoy={};
+  pagosHoyGlobal.forEach(pg=>{totalesPorMetodoHoy[pg.metodo]=(totalesPorMetodoHoy[pg.metodo]||0)+Number(pg.importe);});
   const porMedio=medio=>{
     const ventas=Number(totalesPorMetodoHoy[medio]||0);
     const extra=ingresosExtraHoy.filter(i=>i.metodo_pago===medio).reduce((s,i)=>s+Number(i.monto),0);
@@ -1981,7 +1979,7 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>EGRESOS (compras + gastos + pagos a empleados)</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:"var(--primary)"}}>{money(totalEgresosHoy)}</div></div>
           <div><div style={{fontSize:13.5,color:"var(--ink-soft)",fontWeight:700}}>SALDO</div><div style={{fontFamily:"'Fraunces',serif",fontSize:22,fontWeight:700,color:totalIngresosHoy-totalEgresosHoy<0?"var(--warn)":"var(--ink)"}}>{money(totalIngresosHoy-totalEgresosHoy)}</div></div>
         </div>
-        {!cierreHoyCaja&&<div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>Todavía no cerraste la caja de hoy, así que "Ventas" está en $0 hasta que cierres el día.</div>}
+        <div style={{fontSize:13.5,color:"var(--ink-soft)",marginBottom:14}}>Se actualiza en tiempo real a medida que se registran pagos, sin necesidad de cerrar la caja.</div>
         <div style={{fontSize:14,fontWeight:700,color:"var(--ink-soft)",marginTop:6,marginBottom:8,borderTop:"1px solid var(--line)",paddingTop:12}}>Por medio de pago</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
           {medios.map(md=>{const{ingreso,egreso}=porMedio(md);return(
@@ -2098,9 +2096,9 @@ function PanelCaja({userId,pedidos,items,cierres,menu,recetas,insumos,compras,ga
           const pendienteP=Math.max(0,Math.round((tot-pagadoP)*100)/100);
           const pagoAbiertoAqui=pagoAbierto===p.id;
           return(
-           <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
+          <div key={p.id} className="card" style={{padding:16,display:"flex",flexDirection:"column",gap:10,borderColor:pendienteP<=0?"var(--accent)":"var(--line)"}}>
             <div style={{cursor:"pointer"}} onClick={()=>setAbierto(abiertoAqui?null:p.id)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{fontWeight:700,fontSize:16}}>{abiertoAqui?"▾":"▸"} Mesa {p.mesa_numero}</div>
                 <div style={{fontWeight:800,fontFamily:"'Fraunces',serif",fontSize:18,color:"var(--primary-dark)"}}>{money(tot)}</div>
               </div>
@@ -2298,9 +2296,9 @@ function GraficoTortaRentabilidad({productos}){
       </svg>
       <div style={{display:"flex",flexDirection:"column",gap:8,flex:1,minWidth:150,maxHeight:220,overflowY:"auto"}}>
         {slices.map((s,i)=>(
-      <div key={s.id||i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5}}>
+          <div key={s.id||i} style={{display:"flex",alignItems:"center",gap:8,fontSize:13.5}}>
             <span style={{width:11,height:11,borderRadius:4,background:s.color,flexShrink:0}}/>
-            <span style={{color:"var(--ink)",fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={s.nombre}>{s.nombre}</span>
+               <span style={{color:"var(--ink)",fontWeight:600,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}} title={s.nombre}>{s.nombre}</span>
             <span style={{color:"var(--ink-soft)",fontWeight:700}}>{money(s.margen)}</span>
           </div>
         ))}
@@ -2498,9 +2496,9 @@ function PanelResultados({items,menu,recetas,insumos,gastos,compras,config,mesas
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.margen==null?"var(--warn)":m.margen<0?"var(--warn)":"var(--accent)"}}>{m.margen==null?"—":money(m.margen)}</td>
                 <td style={{padding:"9px 14px",textAlign:"right",fontWeight:700,color:m.pct==null?"var(--warn)":m.pct<UMBRAL_MARGEN_BAJO?"var(--warn)":"var(--ink)"}}>{m.pct==null?"—":`${m.pct}%`}</td>
                 <td style={{padding:"9px 14px",textAlign:"center"}}>{conVentaHoy.has(m.id)?"✅":"—"}</td>
-                </tr>
+              </tr>
             ))}
-          </tbody>
+               </tbody>
         </table>
       </div>}
     </div>
